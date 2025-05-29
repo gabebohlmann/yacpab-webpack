@@ -18,13 +18,14 @@ const babelLoaderConfiguration = {
   // Add every directory that needs to be compiled by Babel during the build.
   include: [
     path.resolve(__dirname, "index.web.js"),
-    path.resolve(__dirname, "App.tsx"),
+    path.resolve(__dirname, "web/app/App.tsx"),
     path.resolve(__dirname, "src"),
-    path.resolve(__dirname, "DrawerLayout.tsx"),  
-    path.resolve(__dirname, "Home.tsx"),
-    path.resolve(__dirname, "About.tsx"),
-    path.resolve(__dirname, "MainStack.tsx"),
-    path.resolve(__dirname, "HamburgerMenu.tsx"),
+    // path.resolve(__dirname, "web/app/DrawerLayout.tsx"),
+    // path.resolve(__dirname, "web/app/Home.tsx"),
+    // path.resolve(__dirname, "web/app/About.tsx"),
+    // path.resolve(__dirname, "web/app/MainStack.tsx"),
+    // path.resolve(__dirname, "web/app/HamburgerMenu.tsx"),
+    path.resolve(__dirname, "web/app"),
     ...compileNodeModules,
   ],
   use: {

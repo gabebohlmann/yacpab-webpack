@@ -1,3 +1,5 @@
+// web/app/About.tsx
+// About.tsx
 // src/About.jsx
 import { View, Text, StyleSheet } from 'react-native';
 import { useColorScheme } from "react-native"
