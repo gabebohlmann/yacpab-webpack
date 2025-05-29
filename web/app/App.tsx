@@ -1,13 +1,22 @@
-// App.tsx      
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { DrawerLayout } from './DrawerLayout';
-import 'react-native-gesture-handler';
+// web/app/App.tsx
+// App.tsx
+import React from "react";
+import {
+  NavigationContainer,
+  DarkTheme,
+  DefaultTheme, 
+} from '@react-navigation/native'
+import DrawerLayout from "./(drawer)/layout";
+import "react-native-gesture-handler";
+import { useColorScheme } from "react-native";
 
 // No more divs! NavigationContainer is the top-level component.
 function App() {
+  const colorScheme = useColorScheme()
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      theme={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+    >
       <DrawerLayout />
     </NavigationContainer>
   );
