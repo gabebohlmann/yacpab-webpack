@@ -25,7 +25,7 @@ const babelLoaderConfiguration = {
     // path.resolve(__dirname, "web/app/About.tsx"),
     // path.resolve(__dirname, "web/app/MainStack.tsx"),
     // path.resolve(__dirname, "web/app/HamburgerMenu.tsx"),
-    path.resolve(__dirname, "web/app"),
+    path.resolve(__dirname, "apps/web/app"),
     path.resolve(__dirname, "packages/app/features"),
     ...compileNodeModules,
   ],

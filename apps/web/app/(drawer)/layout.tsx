@@ -1,19 +1,19 @@
 // web/app/(drawer)/layout.tsx
 // apps/next/app/(drawer)/layout.tsx
-'use client'
+"use client";
 
-import React from 'react'
+import React from "react";
 import {
   createDrawerNavigator,
   DrawerNavigationOptions,
-} from '@react-navigation/drawer'
+} from "@react-navigation/drawer";
 import {
   useNavigation as useReactNativeNavigation,
   DrawerActions,
   RouteProp,
   ParamListBase,
-} from '@react-navigation/native'
-import { Pressable, Text, View, StyleSheet } from 'react-native'
+} from "@react-navigation/native";
+import { Pressable, Text, View, StyleSheet } from "react-native";
 
 import {
   findNavigatorLayout,
@@ -21,33 +21,33 @@ import {
   ScreenConfig,
   TabNavigatorLayoutConfig,
   NavigationSchemaItem,
-} from '../../../packages/app/features/navigation/layout'
+} from "../../../../packages/app/features/navigation/layout";
 
-import TabsLayout from './(tabs)/layout'
+import TabsLayout from "./(tabs)/layout";
 
-const RNDrawer = createDrawerNavigator()
+const RNDrawer = createDrawerNavigator();
 
-const BackIconComponent = () => <Text style={styles.iconText}>‹</Text>
-const HamburgerIconComponent = () => <Text style={styles.iconText}>☰</Text>
+const BackIconComponent = () => <Text style={styles.iconText}>‹</Text>;
+const HamburgerIconComponent = () => <Text style={styles.iconText}>☰</Text>;
 
 function CustomDrawerHeaderLeft({
   currentDrawerRouteName,
 }: {
-  currentDrawerRouteName: string
+  currentDrawerRouteName: string;
 }) {
-  const reactNativeNavigation = useReactNativeNavigation()
-  const isTabsScreenActive = currentDrawerRouteName === '(tabs)'
+  const reactNativeNavigation = useReactNativeNavigation();
+  const isTabsScreenActive = currentDrawerRouteName === "(tabs)";
 
   if (!isTabsScreenActive) {
     return (
       <Pressable
-        onPress={() => reactNativeNavigation.navigate('(tabs)' as never)}
+        onPress={() => reactNativeNavigation.navigate("(tabs)" as never)}
         hitSlop={20}
         style={styles.headerButton}
       >
         <BackIconComponent />
       </Pressable>
-    )
+    );
   } else {
     return (
       <Pressable
@@ -59,51 +59,51 @@ function CustomDrawerHeaderLeft({
       >
         <HamburgerIconComponent />
       </Pressable>
-    )
+    );
   }
 }
 
 export default function DrawerLayout({
   children,
 }: {
-  children?: React.ReactNode
+  children?: React.ReactNode;
 }) {
-  const drawerConfig = findNavigatorLayout('(drawer)') as
+  const drawerConfig = findNavigatorLayout("(drawer)") as
     | DrawerNavigatorLayoutConfig
-    | undefined
+    | undefined;
 
-  if (!drawerConfig || drawerConfig.type !== 'drawer') {
+  if (!drawerConfig || drawerConfig.type !== "drawer") {
     console.error(
       "Drawer configuration '(drawer)' not found or is not the correct type!"
-    )
-    return <View style={styles.container}>{children}</View>
+    );
+    return <View style={styles.container}>{children}</View>;
   }
 
-  const navigatorOptions = drawerConfig.drawerNavigatorOptions || {}
-  const defaultScreenOptionsFromConfig = navigatorOptions.screenOptions || {}
+  const navigatorOptions = drawerConfig.drawerNavigatorOptions || {};
+  const defaultScreenOptionsFromConfig = navigatorOptions.screenOptions || {};
 
   const getHeaderTitle = (currentDrawerRouteName: string): string => {
     const screenConf = drawerConfig.screens.find(
       (s: NavigationSchemaItem) => s.name === currentDrawerRouteName
-    )
+    );
     if (screenConf?.options?.title) {
-      return screenConf.options.title
+      return screenConf.options.title;
     }
-    return drawerConfig.name
-  }
+    return drawerConfig.name;
+  };
 
   return (
     <RNDrawer.Navigator
-      initialRouteName={navigatorOptions.initialRouteName || '(tabs)'}
+      initialRouteName={navigatorOptions.initialRouteName || "(tabs)"}
       {...(navigatorOptions as DrawerNavigationOptions)}
       screenOptions={({
         route,
       }: {
-        route: RouteProp<ParamListBase, string>
+        route: RouteProp<ParamListBase, string>;
       }) => {
         const baseScreenOptions: DrawerNavigationOptions = {
           ...(defaultScreenOptionsFromConfig as DrawerNavigationOptions),
-        }
+        };
         return {
           ...baseScreenOptions,
           headerShown: true,
@@ -111,15 +111,15 @@ export default function DrawerLayout({
             <CustomDrawerHeaderLeft currentDrawerRouteName={route.name} />
           ),
           title: getHeaderTitle(route.name),
-        }
+        };
       }}
     >
       {drawerConfig.screens.map((screenOrNavConfig: NavigationSchemaItem) => {
         if (
-          screenOrNavConfig.type === 'tabs' &&
-          screenOrNavConfig.name === '(tabs)'
+          screenOrNavConfig.type === "tabs" &&
+          screenOrNavConfig.name === "(tabs)"
         ) {
-          const tabNavConfig = screenOrNavConfig as TabNavigatorLayoutConfig
+          const tabNavConfig = screenOrNavConfig as TabNavigatorLayoutConfig;
           return (
             <RNDrawer.Screen
               key={tabNavConfig.name}
@@ -128,20 +128,20 @@ export default function DrawerLayout({
               options={{
                 ...(tabNavConfig.options as DrawerNavigationOptions),
                 drawerItemStyle: tabNavConfig.options?.drawerItemStyle || {
-                  display: 'none',
+                  display: "none",
                 },
                 drawerLabel:
                   tabNavConfig.options?.drawerLabel ||
                   tabNavConfig.options?.title ||
-                  'Home',
+                  "Home",
               }}
               // This line will be valid once TabNavigatorLayoutConfig in
               // packages/app/features/navigation/layout.tsx includes 'initialParams?: object;'
               initialParams={tabNavConfig.initialParams}
             />
-          )
-        } else if (screenOrNavConfig.type === 'screen') {
-          const screenConfig = screenOrNavConfig as ScreenConfig
+          );
+        } else if (screenOrNavConfig.type === "screen") {
+          const screenConfig = screenOrNavConfig as ScreenConfig;
           return (
             <RNDrawer.Screen
               key={screenConfig.name}
@@ -155,12 +155,12 @@ export default function DrawerLayout({
               }}
               initialParams={screenConfig.initialParams} // This is fine as ScreenConfig has initialParams
             />
-          )
+          );
         }
-        return null
+        return null;
       })}
     </RNDrawer.Navigator>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -169,14 +169,14 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     paddingHorizontal: 15,
-    justifyContent: 'center',
-    height: '100%',
+    justifyContent: "center",
+    height: "100%",
   },
   iconText: {
     fontSize: 22,
-    color: '#007AFF',
+    color: "#007AFF",
   },
-})
+});
 
 // apps/next/app/(drawer)/layout.tsx
 // 'use client'

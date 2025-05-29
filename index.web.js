@@ -1,7 +1,7 @@
 // index.web.js
 import { AppRegistry } from "react-native";
 
-import App from "./web/app/App";
+import App from "./apps/web/app/App";
 import { name as appName } from "./app.json";
 
 if (module.hot) {
