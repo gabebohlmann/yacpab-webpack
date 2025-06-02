@@ -1,9 +1,7 @@
 // packages/config/navigation/layout.tsx
-// packages/app/features/navigation/layout.tsx
 import { ComponentType } from 'react'
 import { Text, ViewStyle } from 'react-native'
 import { HomeScreen } from '#features/home/screen'
-import { AccountScreen } from '#features/account/screen'
 import { SubsScreen } from '#features/subs/screen'
 import { SettingsScreen } from '#features/settings/screen'
 import { OptionsScreen } from '#features/options/screen'
@@ -25,6 +23,9 @@ import {
   ParamListBase, // Useful for generic navigator/screen prop types
   // RouteProp, // Keep if used directly
 } from '@react-navigation/native'
+
+export const isAutoSaveEnabled = true
+export const isEditing = false
 
 // --- Generic Configuration Types ---
 
@@ -248,21 +249,11 @@ export const appNavigationStructure: NavigatorLayout[] = [
                 type: 'screen',
                 name: 'home',
                 component: HomeScreen,
-                href: '/drawer/home',
+                href: '/home',
                 options: {
                   title: 'Home',
                   tabBarIconName: 'home',
                   tabBarLabel: 'Feed',
-                },
-              },
-              {
-                type: 'screen',
-                name: 'account',
-                component: AccountScreen,
-                href: '/drawer/account',
-                options: {
-                  title: 'Account',
-                  tabBarIconName: 'person',
                 },
               },
               {
