@@ -1,4 +1,4 @@
-// web/app/(drawer)/layout.tsx
+// apps/web/app/(drawer)/layout.tsx
 // apps/next/app/(drawer)/layout.tsx
 'use client'
 
@@ -21,7 +21,7 @@ import {
   ScreenConfig,
   TabNavigatorLayoutConfig,
   NavigationSchemaItem,
-} from '../../../../packages/app/features/navigation/layout'
+} from '#config/navigation/layout'
 
 import TabsLayout from './(tabs)/layout'
 

@@ -1,3 +1,20 @@
+// tsconfig.json
 {
-  "extends": "@react-native/typescript-config/tsconfig.json"
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "include": [
+    "apps/web/**/*",
+    "packages/**/*"
+, "index.js"  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["."],
+      "#web/*": ["apps/web/*"],
+      "#expo/*": ["apps/expo/*"],
+      "#packages/*": ["packages/*"],
+      "#core/*": ["packages/core/*"],
+      "#features/*": ["packages/core/features/*"],
+      "#config/*": ["packages/config/*"]
+    }
+  }
 }

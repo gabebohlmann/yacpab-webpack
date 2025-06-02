@@ -1,11 +1,12 @@
+// packages/config/navigation/layout.tsx
 // packages/app/features/navigation/layout.tsx
 import { ComponentType } from 'react'
 import { Text, ViewStyle } from 'react-native'
-import { HomeScreen } from '../home/screen'
-import { AccountScreen } from '../account/screen'
-import { SubsScreen } from '../subs/screen'
-import { SettingsScreen } from '../settings/screen'
-import { OptionsScreen } from '../options/screen'
+import { HomeScreen } from '#features/home/screen'
+import { AccountScreen } from '#features/account/screen'
+import { SubsScreen } from '#features/subs/screen'
+import { SettingsScreen } from '#features/settings/screen'
+import { OptionsScreen } from '#features/options/screen'
 
 import {
   BottomTabNavigationOptions,

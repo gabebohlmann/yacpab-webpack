@@ -1,5 +1,4 @@
 // apps/web/webpack.config.js
-// webpack.config.js
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
@@ -8,6 +7,8 @@ const webpack = require("webpack");
 const appDirectory = path.resolve(__dirname);
 const monorepoRoot = path.resolve(__dirname, '../..');
 const { presets, plugins } = require("../../babel.config.js");
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+const { TanStackRouterWebpack } = require('@tanstack/router-plugin/webpack')
 
 const compileNodeModules = [
   // Add every react-native package that needs compiling
@@ -28,7 +29,8 @@ const babelLoaderConfiguration = {
     // path.resolve(__dirname, "web/app/MainStack.tsx"),
     // path.resolve(__dirname, "web/app/HamburgerMenu.tsx"),
     path.resolve(__dirname, "app"),
-    path.resolve(monorepoRoot, "packages/app/features"),
+    path.resolve(monorepoRoot, "packages/core/features"),
+    path.resolve(monorepoRoot, "packages/config"),
     ...compileNodeModules
     // ...compileNodeModules.map((moduleName) => path.resolve(__dirname, `../../node_modules/${moduleName}`)),
   ],
@@ -59,6 +61,11 @@ module.exports = {
   resolve: {
     extensions: [".web.tsx", ".web.ts", ".tsx", ".ts", ".web.js", ".js"],
     alias: { "react-native$": "react-native-web" },
+    plugins: [
+      new TsconfigPathsPlugin({
+        configFile: path.resolve(monorepoRoot, 'tsconfig.json'),
+      })
+    ],
   },
   module: {
     rules: [
@@ -108,6 +115,8 @@ module.exports = {
     new webpack.HotModuleReplacementPlugin(),
     new webpack.DefinePlugin({ __DEV__: JSON.stringify(true) }),
     new CopyWebpackPlugin({ patterns: [{ from: "public", to: "" }] }),
+    // new TsconfigPathsPlugin(),
+    TanStackRouterWebpack({ target: 'react', autoCodeSplitting: true }),
   ],
   optimization: { splitChunks: { chunks: "all" } },
   performance: { maxAssetSize: 512000, maxEntrypointSize: 512000 },

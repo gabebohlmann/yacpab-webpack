@@ -1,3 +1,4 @@
+// .eslintrc.js
 /** @type {import("eslint").ESLint.ConfigData} */
 module.exports = {
   root: true,
@@ -11,4 +12,11 @@ module.exports = {
     "react-hooks/exhaustive-deps": "warn",
     "no-console": "warn",
   },
+  ignorePatterns: [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "**/*.test.js",
+
+  ],
 };
