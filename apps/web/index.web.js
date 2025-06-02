@@ -1,3 +1,4 @@
+// apps/web/index.web.js
 // index.web.js
 import { AppRegistry } from "react-native";
 

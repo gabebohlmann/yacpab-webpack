@@ -107,7 +107,7 @@ module.exports = {
     new HtmlWebpackPlugin({ template: path.join(__dirname, "index.html") }),
     new webpack.HotModuleReplacementPlugin(),
     new webpack.DefinePlugin({ __DEV__: JSON.stringify(true) }),
-    new CopyWebpackPlugin({ patterns: [{ from: "apps/web/public", to: "" }] }),
+    new CopyWebpackPlugin({ patterns: [{ from: "public", to: "" }] }),
   ],
   optimization: { splitChunks: { chunks: "all" } },
   performance: { maxAssetSize: 512000, maxEntrypointSize: 512000 },

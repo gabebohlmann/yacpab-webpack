@@ -1,4 +1,4 @@
-// babel.config.web.js
+// apps/web/babel.config.web.js
 module.exports = {
   presets: ["module:@react-native/babel-preset"],
   plugins: [
