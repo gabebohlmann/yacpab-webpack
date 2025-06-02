@@ -1,6 +1,4 @@
 // apps/web/app/(drawer)/(tabs)/layout.tsx
-// apps/web/app/(drawer)/(tabs)/index.tsx
-// apps/next/app/(drawer)/(tabs)/layout.tsx
 'use client'
 
 import React from 'react'

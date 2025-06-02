@@ -1,0 +1,17 @@
+// apps/expo/tsconfig.json
+{
+  "extends": "../../tsconfig.json",
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "../../packages/core/provider/index.tsx",
+    "../../packages/config/navigation/layout.tsx"
+, "types.d.ts"  ],
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx"
+  },
+  "references": []
+}

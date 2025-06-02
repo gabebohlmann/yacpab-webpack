@@ -1,4 +1,4 @@
-// apps/next/app/(drawer)/options/page.tsx
+// apps/web/app/(drawer)/options/page.tsx
 'use client'
 
 import { View, Text, StyleSheet } from 'react-native' // Or use web equivalents

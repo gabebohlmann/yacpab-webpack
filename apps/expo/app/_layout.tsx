@@ -4,7 +4,7 @@ import { useColorScheme } from 'react-native'
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'
 import { SplashScreen, Stack } from 'expo-router' // Import Stack instead of Drawer
-import { Provider } from 'app/provider'
+import { Provider } from '#core/provider'
 // import { NativeToast } from '@my/ui/src/NativeToast'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 

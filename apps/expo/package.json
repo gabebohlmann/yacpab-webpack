@@ -1,0 +1,44 @@
+{
+  "name": "expo-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "npx expo start -c",
+    "android": "npx expo run:android",
+    "ios": "yarn fix-xcode-env && npx expo run:ios",
+    "eject": "npx expo eject",
+    "fix-xcode-env": "node scripts/fix-xcode-env.mjs",
+    "prebuild": "yarn expo prebuild"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.26.0",
+    "@expo/config-plugins": "~10.0.0",
+    "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/drawer": "^7.3.9",
+    "@react-navigation/native": "^7.1.6",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "burnt": "^0.12.2",
+    "expo": "53.0.9",
+    "expo-constants": "~17.1.6",
+    "expo-dev-client": "~5.1.8",
+    "expo-font": "~13.3.1",
+    "expo-linear-gradient": "~14.1.4",
+    "expo-linking": "~7.1.4",
+    "expo-router": "~5.0.6",
+    "expo-splash-screen": "~0.30.8",
+    "expo-status-bar": "~2.2.3",
+    "expo-updates": "~0.28.12",
+    "react-native": "0.79.2",
+    "react-native-reanimated": "~3.17.4",
+    "react-native-renderer": "^15.5.3",
+    "react-native-svg": "15.11.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.6",
+    "@expo/metro-config": "~0.20.0",
+    "@tamagui/babel-plugin": "^1.126.13",
+    "metro-minify-terser": "^0.81.0",
+    "typescript": "~5.8.3"
+  }
+}

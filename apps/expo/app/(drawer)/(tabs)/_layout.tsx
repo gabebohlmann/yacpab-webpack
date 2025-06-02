@@ -1,5 +1,4 @@
 // apps/expo/app/(drawer)/(tabs)/_layout.tsx
-// apps/expo/app/(app)/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router'
 import { Text, useColorScheme } from 'react-native' // For icon rendering
 
@@ -8,7 +7,7 @@ import {
   findNavigatorLayout,
   TabNavigatorLayoutConfig,
   PlaceholderIcon,
-} from 'app/features/navigation/layout'
+} from '#config/navigation/layout'
 
 // This is a simple TabBarIcon component.
 // In a real app, you'd use a proper icon library like @expo/vector-icons
