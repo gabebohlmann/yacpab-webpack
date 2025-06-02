@@ -6,7 +6,7 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "build:web": "rm -rf dist/ && webpack --mode=production --config webpack.config.js --progress",
-    "web": "webpack serve --mode=development --config webpack.config.js --progress",
+    "web": "webpack serve --mode=development --config apps/web/webpack.config.js --progress",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"

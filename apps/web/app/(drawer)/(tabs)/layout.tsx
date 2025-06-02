@@ -15,7 +15,7 @@
               PlaceholderIcon,
               ScreenConfig,
               // ScreenOptionsConfig, // Not directly needed if using tabNavigatorOptions.screenOptions
-            } from '../../../../packages/app/features/navigation/layout'
+            } from '../../../../../packages/app/features/navigation/layout'
 
             const Tab = createBottomTabNavigator()
 

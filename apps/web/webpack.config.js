@@ -1,3 +1,4 @@
+// apps/web/webpack.config.js
 // webpack.config.js
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -5,29 +6,31 @@ const path = require("path");
 const webpack = require("webpack");
 
 const appDirectory = path.resolve(__dirname);
-const { presets, plugins } = require("./babel.config.js");
+const monorepoRoot = path.resolve(__dirname, '../..');
+const { presets, plugins } = require("../../babel.config.js");
 
 const compileNodeModules = [
   // Add every react-native package that needs compiling
   "react-native-reanimated",
   "react-native-gesture-handler",
-].map((moduleName) => path.resolve(appDirectory, `node_modules/${moduleName}`));
+].map((moduleName) => path.resolve(monorepoRoot, `node_modules/${moduleName}`));
 
 const babelLoaderConfiguration = {
   test: /\.js$|tsx?$/,
   // Add every directory that needs to be compiled by Babel during the build.
   include: [
     path.resolve(__dirname, "index.web.js"),
-    path.resolve(__dirname, "web/app/App.tsx"),
+    path.resolve(__dirname, "app/App.tsx"),
     path.resolve(__dirname, "src"),
     // path.resolve(__dirname, "web/app/DrawerLayout.tsx"),
     // path.resolve(__dirname, "web/app/Home.tsx"),
     // path.resolve(__dirname, "web/app/About.tsx"),
     // path.resolve(__dirname, "web/app/MainStack.tsx"),
     // path.resolve(__dirname, "web/app/HamburgerMenu.tsx"),
-    path.resolve(__dirname, "web/app"),
-    path.resolve(__dirname, "packages/app/features"),
-    ...compileNodeModules,
+    path.resolve(__dirname, "app"),
+    path.resolve(monorepoRoot, "packages/app/features"),
+    ...compileNodeModules
+    // ...compileNodeModules.map((moduleName) => path.resolve(__dirname, `../../node_modules/${moduleName}`)),
   ],
   use: {
     loader: "babel-loader",
@@ -49,7 +52,7 @@ const imageLoaderConfiguration = {
 module.exports = {
   entry: { app: path.join(__dirname, "index.web.js") },
   output: {
-    path: path.resolve(appDirectory, "dist"),
+    path: path.resolve(appDirectory, "../../dist"),
     publicPath: "/",
     filename: "[name].[contenthash].js",
   },
@@ -67,32 +70,32 @@ module.exports = {
         test: /\.m?js$/,
         include: [
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/@react-navigation/core/lib/module"
           ),
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/@react-navigation/elements/lib/module"
           ),
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/@react-navigation/native/lib/module"
           ),
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/@react-navigation/native-stack/lib/module"
           ),
           // not necessary but included for consistency, and bug fix PR
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/@react-navigation/bottom-tabs/lib/module"
           ),
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/@react-navigation/drawer/lib/module"
           ),
           path.resolve(
-            __dirname,
+            monorepoRoot,
             "node_modules/react-native-drawer-layout/lib/module"
           ),
         ],
@@ -104,7 +107,7 @@ module.exports = {
     new HtmlWebpackPlugin({ template: path.join(__dirname, "index.html") }),
     new webpack.HotModuleReplacementPlugin(),
     new webpack.DefinePlugin({ __DEV__: JSON.stringify(true) }),
-    new CopyWebpackPlugin({ patterns: [{ from: "public", to: "" }] }),
+    new CopyWebpackPlugin({ patterns: [{ from: "apps/web/public", to: "" }] }),
   ],
   optimization: { splitChunks: { chunks: "all" } },
   performance: { maxAssetSize: 512000, maxEntrypointSize: 512000 },

@@ -21,7 +21,7 @@ import {
   ScreenConfig,
   TabNavigatorLayoutConfig,
   NavigationSchemaItem,
-} from '../../../packages/app/features/navigation/layout'
+} from '../../../../packages/app/features/navigation/layout'
 
 import TabsLayout from './(tabs)/layout'
 
