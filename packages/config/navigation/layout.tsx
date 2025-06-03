@@ -14,6 +14,7 @@ import {
 ParamListBase, // Useful for generic navigator/screen prop types
 // RouteProp, // Keep if used directly
  } from '@react-navigation/native';
+import { HomeScreen } from "#features/(home)/screen";
 export const isAutoSaveEnabled = true;
 export const isEditing = false;
 // --- Generic Configuration Types ---
@@ -188,7 +189,20 @@ export const appNavigationStructure: NavigatorLayout[] = [
                                 headerShown: false,
                             }, // This should now be valid
                         },
-                        screens: []
+                        screens: [
+                            {
+                                type: 'screen',
+                                name: '(home)/index',
+                                component: HomeScreen,
+                                href: '/',
+                                options: {
+                                    title: 'Home',
+                                    tabBarIconName: 'home',
+                                    tabBarLabel: 'Home',
+                                    drawerLabel: 'Home',
+                                },
+                            }
+                        ]
                     }
                 ]
             },
