@@ -22,6 +22,7 @@ import { InfoScreen } from "#features/info/screen";
 import { HomeScreen } from "#features/(home)/screen";
 import { ContactScreen } from "#features/contact/screen";
 import { ProfileScreen } from "#features/profile/screen";
+import { TrendingScreen } from "#features/trending/screen";
 export const isAutoSaveEnabled = true;
 export const isEditing = false;
 // --- Generic Configuration Types ---
@@ -226,7 +227,18 @@ export const appNavigationStructure: NavigatorLayout[] = [
                                     tabBarLabel: 'Profile',
                                 },
                             },
-                        ],
+                            {
+                                type: 'screen',
+                                name: 'trending',
+                                component: TrendingScreen,
+                                href: '/trending',
+                                options: {
+                                    title: 'Trending',
+                                    tabBarIconName: 'trending',
+                                    tabBarLabel: 'Trending',
+                                },
+                            },
+                        ]
                     },
                     {
                         type: 'screen',
