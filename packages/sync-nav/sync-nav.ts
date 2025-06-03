@@ -1164,16 +1164,19 @@ async function main() {
   }
 
   if (command === 'add' || command === 'delete') {
-    const screenNameArg = args[1]; 
-    if (!screenNameArg) {
-      console.error(`Please provide a screen name for the '${command}' command.`);
+    const screenArgs = args.slice(1); // Get all screen names after 'add' or 'delete'
+    if (screenArgs.length === 0) {
+      console.error(`Please provide at least one screen name for the '${command}' command.`);
       process.exit(1);
     }
-    const fullScreenName = (screenNameArg.includes('/') || screenNameArg.startsWith('(')) 
-                            ? screenNameArg 
-                            : `${screenNameArg}/index`;
-    await handleDirectCliCommands(command, [fullScreenName]);
+    const fullScreenNames = screenArgs.map(nameArg => 
+        (nameArg.includes('/') || nameArg.startsWith('(')) 
+            ? nameArg 
+            : `${nameArg}/index`
+    );
+    await handleDirectCliCommands(command, fullScreenNames);
 
+    // Re-validate and update state after CLI command
     const postCliConfig = await parseNavigationConfig(NAVIGATION_CONFIG_PATH);
     if (postCliConfig?.screens && postCliConfig.sourceFile) {
       console.log("Running post-CLI command consistency validation...");
@@ -1230,108 +1233,190 @@ async function handleDirectCliCommands(command, configScreenNames) {
       return;
     }
 
-    const actions = { screensToAdd: [], screenNamesToDelete: [], importsToAdd: [], importsToRemove: [], clearCommands: false };
-    let astChangedByCli = false;
+    const astModificationsForLayout = { screensToAdd: [], screenNamesToDelete: [], importsToAdd: [], importsToRemove: [] };
+    const fileGenerationDetails = []; // Store details needed for file generation
+    let astShouldChange = false;
 
-    for (const configScreenName of configScreenNames) { 
-        const routeSegmentName = getRouteSegmentName(configScreenName); 
-        const featureFolderName = getRouteSegmentName(configScreenName); // Use routeSegmentName for feature folder
-        const cleanFeatureName = getCleanFeatureName(configScreenName); 
+    if (command === 'add') {
+        if (configScreenNames.length === 0) {
+            console.log("No screens specified to add.");
+            return;
+        }
 
-        // Updated prompt for adding screens
-        let parentChoice;
-        if (command === 'add') {
-            const { itemType } = await inquirer.default.prompt([
-                {
-                    type: 'list',
-                    name: 'itemType',
-                    message: `What type of item do you want to add for '${configScreenName}'?`,
-                    choices: [
-                        { name: 'As a new Tab (screen inside the Tabs navigator)', value: { name: '(tabs)', type: 'tabs' } },
-                        { name: 'As a new Drawer Item (screen directly in the Drawer)', value: { name: '(drawer)', type: 'drawer' } }
-                    ]
+        const { parentNavigatorChoice } = await inquirer.default.prompt([
+            {
+                type: 'list',
+                name: 'parentNavigatorChoice',
+                message: `Add ${configScreenNames.length > 1 ? 'these screens' : `screen '${configScreenNames[0]}'`} to which navigator?`,
+                choices: [
+                    { name: 'Tabs Navigator (as new tabs)', value: { name: '(tabs)', type: 'tabs' } },
+                    { name: 'Drawer Navigator (as new drawer items)', value: { name: '(drawer)', type: 'drawer' } }
+                ]
+            }
+        ]);
+        const parentNameFromPrompt = parentNavigatorChoice.name;
+        const parentTypeFromPrompt = parentNavigatorChoice.type;
+
+        // Ask for global default confirmation
+        const { useDefaultsForAll } = await inquirer.default.prompt([{
+            type: 'confirm',
+            name: 'useDefaultsForAll',
+            message: `Use default configurations for all ${configScreenNames.length} screen(s)? (You can customize each later if you choose 'No')`,
+            default: true
+        }]);
+
+        for (const configScreenName of configScreenNames) {
+            const routeSegmentName = getRouteSegmentName(configScreenName);
+            const featureFolderName = getRouteSegmentName(configScreenName); // For #features/... path
+            const cleanFeatureName = getCleanFeatureName(configScreenName);
+
+            let componentName = capitalizeFirstLetter(cleanFeatureName) + 'Screen';
+            let title = capitalizeFirstLetter(cleanFeatureName);
+            let icon = cleanFeatureName.toLowerCase();
+            let label = capitalizeFirstLetter(cleanFeatureName);
+            const parentRouteSegment = getRouteSegmentName(parentNameFromPrompt);
+            let href = `/${parentRouteSegment === 'Root' ? '' : parentRouteSegment + '/'}${routeSegmentName}`;
+            
+            let finalConfigScreenName = configScreenName; // Will be like "name/index"
+
+            if (!useDefaultsForAll) {
+                const { confirmDefaultCurrent } = await inquirer.default.prompt([{ 
+                    type: 'confirm', 
+                    name: 'confirmDefaultCurrent', 
+                    message: `Use default config for '${configScreenName}'? (Comp: ${componentName}, Title: ${title})`, 
+                    default: true 
+                }]);
+
+                if (!confirmDefaultCurrent) {
+                    const answers = await inquirer.default.prompt([
+                        { type: 'input', name: 'routeSegment', message: `Route segment for '${configScreenName}':`, default: routeSegmentName, validate: input => /^[a-z0-9_()]+$/.test(input) || 'Invalid segment name.' },
+                        { type: 'input', name: 'componentName', message: 'ComponentName:', default: componentName, validate: input => /^[A-Z][a-zA-Z0-9_]*Screen$/.test(input) || 'Invalid component name.' },
+                        { type: 'input', name: 'title', message: 'Screen title:', default: title },
+                        { type: 'input', name: 'href', message: 'Screen href (full path e.g. /drawer/settings):', default: href },
+                    ]);
+                    
+                    finalConfigScreenName = `${answers.routeSegment}/index`;
+                    componentName = answers.componentName; 
+                    title = answers.title; 
+                    href = answers.href;
+                    const currentFeatureFolderName = answers.routeSegment; // feature folder name is based on the segment
+
+                    if (parentTypeFromPrompt === 'tabs') {
+                        const tabAnswers = await inquirer.default.prompt([{ type: 'input', name: 'icon', message: 'tabBarIconName:', default: icon }]);
+                        icon = tabAnswers.icon;
+                    } else { 
+                        const drawerAnswers = await inquirer.default.prompt([{ type: 'input', name: 'label', message: 'drawerLabel:', default: label }]);
+                        label = drawerAnswers.label;
+                    }
+                    astModificationsForLayout.screensToAdd.push({ name: finalConfigScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt });
+                    astModificationsForLayout.importsToAdd.push({ componentName, screenName: currentFeatureFolderName }); 
+                    fileGenerationDetails.push({ configScreenName: finalConfigScreenName, componentName, parent: parentNavigatorChoice, title });
+                } else { // Use defaults for this specific screen
+                    astModificationsForLayout.screensToAdd.push({ name: configScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt });
+                    astModificationsForLayout.importsToAdd.push({ componentName, screenName: featureFolderName });
+                    fileGenerationDetails.push({ configScreenName, componentName, parent: parentNavigatorChoice, title });
                 }
-            ]);
-            parentChoice = itemType;
-        } else { // For delete command, keep the old prompt or adapt if necessary
+            } else { // Use defaults for all
+                astModificationsForLayout.screensToAdd.push({ name: configScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt });
+                astModificationsForLayout.importsToAdd.push({ componentName, screenName: featureFolderName });
+                fileGenerationDetails.push({ configScreenName, componentName, parent: parentNavigatorChoice, title });
+            }
+        }
+        if (astModificationsForLayout.screensToAdd.length > 0) astShouldChange = true;
+
+    } else if (command === 'delete') {
+        let parentChoiceForDelete;
+        if (configScreenNames.length > 1) {
             const { parent } = await inquirer.default.prompt([
-                { type: 'list', name: 'parent', message: `For screen '${configScreenName}', which navigator should it be deleted from?`,
+                { type: 'list', name: 'parent', message: `Delete these screens from which navigator?`,
                   choices: [ 
                       { name: 'Drawer (parent is (drawer))', value: { name: '(drawer)', type: 'drawer' } },
                       { name: 'Tabs (parent is (tabs))', value: { name: '(tabs)', type: 'tabs' } }
                   ]
                 }
             ]);
-            parentChoice = parent;
+            parentChoiceForDelete = parent;
         }
 
-        const parentNameFromPrompt = parentChoice.name; 
-        const parentTypeFromPrompt = parentChoice.type; 
-
-        let componentName = capitalizeFirstLetter(cleanFeatureName) + 'Screen';
-        let title = capitalizeFirstLetter(cleanFeatureName);
-        let icon = cleanFeatureName.toLowerCase(); // Default for tabs
-        let label = capitalizeFirstLetter(cleanFeatureName); // Default for drawer
-        
-        const parentRouteSegment = getRouteSegmentName(parentNameFromPrompt);
-        let href = `/${parentRouteSegment === 'Root' ? '' : parentRouteSegment + '/'}${routeSegmentName}`;
-
-
-        if (command === 'add') {
-            const { confirmDefault } = await inquirer.default.prompt([{ type: 'confirm', name: 'confirmDefault', message: `Use default config for '${configScreenName}' in '${parentNameFromPrompt}'? (Comp: ${componentName}, Title: ${title})`, default: true }]);
-            if (!confirmDefault) {
-                const answers = await inquirer.default.prompt([
-                    { type: 'input', name: 'routeSegment', message: 'Route segment name (e.g., settings, (home)):', default: routeSegmentName, validate: input => /^[a-z0-9_()]+$/.test(input) || 'Invalid segment name.' },
-                    { type: 'input', name: 'componentName', message: 'ComponentName (PascalCaseScreen):', default: componentName, validate: input => /^[A-Z][a-zA-Z0-9_]*Screen$/.test(input) || 'Invalid component name.' },
-                    { type: 'input', name: 'title', message: 'Screen title:', default: title },
-                    { type: 'input', name: 'href', message: 'Screen href (full path e.g. /drawer/settings):', default: href },
+        for (const configScreenName of configScreenNames) {
+            let parentToDeleteFrom = parentChoiceForDelete;
+            if (!parentToDeleteFrom) { 
+                 const { parent } = await inquirer.default.prompt([
+                    { type: 'list', name: 'parent', message: `For screen '${configScreenName}', which navigator should it be deleted from?`,
+                      choices: [ 
+                          { name: 'Drawer (parent is (drawer))', value: { name: '(drawer)', type: 'drawer' } },
+                          { name: 'Tabs (parent is (tabs))', value: { name: '(tabs)', type: 'tabs' } }
+                      ]
+                    }
                 ]);
-                // Reconstruct configScreenName if segment changed
-                const newConfigScreenName = `${answers.routeSegment}/index`;
-                componentName = answers.componentName; title = answers.title; href = answers.href;
-
-                if (parentTypeFromPrompt === 'tabs') {
-                    const tabAnswers = await inquirer.default.prompt([{ type: 'input', name: 'icon', message: 'tabBarIconName:', default: icon }]);
-                    icon = tabAnswers.icon;
-                } else { 
-                    const drawerAnswers = await inquirer.default.prompt([{ type: 'input', name: 'label', message: 'drawerLabel:', default: label }]);
-                    label = drawerAnswers.label;
-                }
-                actions.screensToAdd.push({ name: newConfigScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt });
-                actions.importsToAdd.push({ componentName, screenName: getRouteSegmentName(newConfigScreenName) }); // Use getRouteSegmentName for feature folder
-
-            } else {
-                 actions.screensToAdd.push({ name: configScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt });
-                 actions.importsToAdd.push({ componentName, screenName: featureFolderName });
+                parentToDeleteFrom = parent;
             }
-            astChangedByCli = true;
+            const parentNameFromPrompt = parentToDeleteFrom.name;
 
-        } else if (command === 'delete') {
             const screenToDelete = currentParsedConfig.screens.find(s => s.name === configScreenName && s.parent.name === parentNameFromPrompt);
             if (!screenToDelete) {
                 console.warn(`Screen '${configScreenName}' not found in parent '${parentNameFromPrompt}'. Skipping AST delete.`);
                 continue;
             }
-            const { confirmDelete } = await inquirer.default.prompt([{ type: 'confirm', name: 'confirmDelete', message: `Confirm removal of screen '${configScreenName}' from '${parentNameFromPrompt}' in layout.tsx?`, default: true }]);
-            if (!confirmDelete) { console.log(`Skipped AST removal of '${configScreenName}'.`); continue; }
-
-            actions.screenNamesToDelete.push({ name: configScreenName, parentName: parentNameFromPrompt });
-            if (screenToDelete.componentName) actions.importsToRemove.push({ componentName: screenToDelete.componentName });
-            astChangedByCli = true;
+            if (configScreenNames.length === 1) { 
+                const { confirmDelete } = await inquirer.default.prompt([{ type: 'confirm', name: 'confirmDelete', message: `Confirm removal of screen '${configScreenName}' from '${parentNameFromPrompt}' in layout.tsx?`, default: true }]);
+                if (!confirmDelete) { console.log(`Skipped AST removal of '${configScreenName}'.`); continue; }
+            }
+            astModificationsForLayout.screenNamesToDelete.push({ name: configScreenName, parentName: parentNameFromPrompt });
+            if (screenToDelete.componentName) astModificationsForLayout.importsToRemove.push({ componentName: screenToDelete.componentName });
+            astShouldChange = true; 
+        }
+        if (configScreenNames.length > 1 && astModificationsForLayout.screenNamesToDelete.length > 0) {
+            const { confirmBatchDelete } = await inquirer.default.prompt([{
+                type: 'confirm',
+                name: 'confirmBatchDelete',
+                message: `Confirm removal of ${astModificationsForLayout.screenNamesToDelete.length} screen(s) from layout.tsx?`,
+                default: true
+            }]);
+            if (!confirmBatchDelete) {
+                console.log("Batch delete cancelled by user.");
+                astModificationsForLayout.screenNamesToDelete = []; 
+                astModificationsForLayout.importsToRemove = [];
+                astShouldChange = false;
+            }
         }
     }
 
-    if (astChangedByCli) {
-      await modifyLayoutFileWithAst(actions);
+    if (astShouldChange) {
+      await modifyLayoutFileWithAst(astModificationsForLayout);
       console.log(`layout.tsx AST updated by CLI command: ${command}.`);
+      
+      const allGeneratedOrModifiedFiles = new Set([NAVIGATION_CONFIG_PATH]);
+
+      if (command === 'add') {
+        console.log(`\nGenerating files for ${fileGenerationDetails.length} added screen(s)...`);
+        for (const task of fileGenerationDetails) {
+          console.log(`\nGenerating files for: ${task.configScreenName}`);
+          const featureP = await generateFeatureScreen(task.configScreenName, task.componentName, task.title, false, true);
+          if(featureP) allGeneratedOrModifiedFiles.add(featureP);
+          const expoP = await generateExpoFile(task.configScreenName, task.componentName, task.parent, false, true);
+          if(expoP) allGeneratedOrModifiedFiles.add(expoP);
+          const webP = await generateWebFile(task.configScreenName, task.componentName, task.parent, false, true);
+          if(webP) allGeneratedOrModifiedFiles.add(webP);
+        }
+      } else if (command === 'delete') {
+        console.log(`\nDeleting files for ${astModificationsForLayout.screenNamesToDelete.length} removed screen(s)...`);
+        for (const screenToDelete of astModificationsForLayout.screenNamesToDelete) {
+            const parentObject = currentParsedConfig.screens.find(s => s.name === screenToDelete.parentName && s.type !== 'screen') || 
+                                 currentParsedConfig.screens.find(s => getRouteSegmentName(s.name) === getRouteSegmentName(screenToDelete.parentName) && s.type !== 'screen') ||
+                                 { name: screenToDelete.parentName, type: 'unknown' }; 
+            const deletedPaths = await deleteScreenFiles(screenToDelete.name, parentObject);
+            deletedPaths.forEach(p => allGeneratedOrModifiedFiles.add(p));
+        }
+      }
+      
       const newConfig = await parseNavigationConfig(NAVIGATION_CONFIG_PATH);
       if (newConfig && newConfig.screens) {
-        await processBatchOfChanges(newConfig.screens); 
-      } else {
-        console.error("Failed to re-parse config after direct CLI AST modification for file processing.");
+          lastAcknowledgedConfigState = { screens: newConfig.screens };
+          console.log("Snapshot `lastAcknowledgedConfigState` updated after CLI operations.");
       }
     } else {
-      console.log('No AST changes made by CLI command. File processing might still be needed if only files were targeted.');
+      console.log('No AST changes made or confirmed by CLI command.');
     }
 
   } catch (error) {
@@ -1344,4 +1429,3 @@ main().catch((err) => {
   console.error('Unhandled error in main execution:', err)
   process.exit(1)
 })
-
