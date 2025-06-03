@@ -1,9 +1,6 @@
 // packages/config/navigation/layout.tsx
 import { ComponentType } from 'react';
 import { Text, ViewStyle } from 'react-native';
-import { SubsScreen } from '#features/subs/screen';
-import { SettingsScreen } from '#features/settings/screen';
-import { OptionsScreen } from '#features/options/screen';
 import { BottomTabNavigationOptions,
 // BottomTabScreenProps, // Keep if used directly
  } from '@react-navigation/bottom-tabs';
@@ -17,12 +14,7 @@ import {
 ParamListBase, // Useful for generic navigator/screen prop types
 // RouteProp, // Keep if used directly
  } from '@react-navigation/native';
-import { AccountScreen } from "#features/account/screen";
-import { InfoScreen } from "#features/info/screen";
 import { HomeScreen } from "#features/(home)/screen";
-import { ContactScreen } from "#features/contact/screen";
-import { ProfileScreen } from "#features/profile/screen";
-import { TrendingScreen } from "#features/trending/screen";
 export const isAutoSaveEnabled = true;
 export const isEditing = false;
 // --- Generic Configuration Types ---
@@ -182,7 +174,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                     {
                         type: 'tabs',
                         name: '(tabs)',
-                        showOn: ['mobile'],  
+                        showOn: ['mobile'],
                         options: {
                             // Options for (tabs) *as a screen/item* within the '(drawer)'
                             title: 'Vidream Main',
@@ -208,97 +200,10 @@ export const appNavigationStructure: NavigatorLayout[] = [
                                     tabBarIconName: 'home',
                                     tabBarLabel: 'Home',
                                     drawerLabel: 'Home',
-                                    
                                 },
-                            },
-                            {
-                                type: 'screen',
-                                name: 'subs/index',
-                                component: SubsScreen,
-                                href: '/subs',
-                                options: {
-                                    title: 'Subscriptions',
-                                    tabBarIconName: 'subscriptions',
-                                    tabBarLabel: 'Subscriptions',
-                                    drawerLabel: 'Subscriptions',
-                                },
-                            },
-                            {
-                                type: 'screen',
-                                name: 'profile/index',
-                                component: ProfileScreen,
-                                href: '/profile',
-                                options: {
-                                    title: 'Profile',
-                                    tabBarIconName: 'person',
-                                    tabBarLabel: 'Profile',
-                                    drawerLabel: 'Profile',
-                                },
-                            },
-                            {
-                                type: 'screen',
-                                name: 'trending/index',
-                                component: TrendingScreen,
-                                href: '/trending',
-                                options: {
-                                    title: 'Trending',
-                                    tabBarIconName: 'trending',
-                                    tabBarLabel: 'Trending',
-                                    drawerLabel: 'Trending',
-                                },
-                            },
+                            }
                         ]
-                    },
-                    {
-                        type: 'screen',
-                        name: 'settings/index',
-                        component: SettingsScreen,
-                        href: '/settings',
-                        options: {
-                            title: 'Settings',
-                            drawerLabel: 'Settings',
-                        },
-                    },
-                    {
-                        type: 'screen',
-                        name: 'options/index',
-                        component: OptionsScreen,
-                        href: '/options',
-                        options: {
-                            title: 'Options',
-                            drawerLabel: 'More Options',
-                        },
-                    },
-                    {
-                        type: 'screen',
-                        name: 'account/index',
-                        component: AccountScreen,
-                        href: '/account',
-                        options: {
-                            title: 'Account',
-                            drawerLabel: 'Account',
-                        },
-                    },
-                    {
-                        type: "screen",
-                        name: "info/index",
-                        component: InfoScreen,
-                        href: "/info",
-                        options: {
-                            title: "Info",
-                            drawerLabel: "Info"
-                        }
-                    },
-                    {
-                        type: "screen",
-                        name: "contact/index",
-                        component: ContactScreen,
-                        href: "/contact",
-                        options: {
-                            title: "Contact",
-                            drawerLabel: "Contact"
-                        }
-                    },
+                    }
                 ]
             },
         ],
