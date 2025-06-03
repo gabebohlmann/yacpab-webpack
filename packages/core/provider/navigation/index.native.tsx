@@ -29,8 +29,8 @@ import { useMemo } from 'react'
 //   )
 // }
 
-export const NavigationProvider = ({
-  children,
-}: {
-  children: React.ReactElement
-}) => <>{children}</>
+export const NavigationProvider = () => <></>
+//   children,
+// }: {
+//   children: React.ReactElement
+// }) => <>{children}</>

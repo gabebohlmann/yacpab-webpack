@@ -199,21 +199,22 @@ export const appNavigationStructure: NavigatorLayout[] = [
                 type: 'screen',
                 name: 'home',
                 component: HomeScreen,
-                href: '/home',
+                href: '/',
                 options: {
                   title: 'Home',
                   tabBarIconName: 'home',
-                  tabBarLabel: 'Feed',
+                  tabBarLabel: 'Home',
                 },
               },
               {
                 type: 'screen',
                 name: 'subs',
                 component: SubsScreen,
-                href: '/drawer/subs',
+                href: '/subs',
                 options: {
                   title: 'Subscriptions',
                   tabBarIconName: 'subscriptions',
+                  tabBarLabel: 'Subscriptions',
                 },
               },
             ],
@@ -222,7 +223,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
             type: 'screen',
             name: 'settings',
             component: SettingsScreen,
-            href: '/drawer/settings',
+            href: '/settings',
             options: {
               title: 'Settings',
               drawerLabel: 'Settings',
@@ -232,7 +233,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
             type: 'screen',
             name: 'options',
             component: OptionsScreen,
-            href: '/drawer/options',
+            href: '/options',
             options: {
               title: 'Options',
               drawerLabel: 'More Options',
@@ -242,7 +243,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
             type: 'screen',
             name: 'account',
             component: AccountScreen,
-            href: '/drawer/account',
+            href: '/account',
             options: {
               title: 'Account',
               drawerLabel: 'Account',
@@ -252,7 +253,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
             type: "screen",
             name: "info",
             component: InfoScreen,
-            href: "/drawer/info",
+            href: "/info",
             options: {
               title: "Info",
               drawerLabel: "Info"

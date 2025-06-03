@@ -19,7 +19,7 @@ module.exports = (api) => {
         },
       ],
       // if you want reanimated support
-      'react-native-reanimated/plugin',
+      'react-native-reanimated/plugin'
     ],
   }
 }

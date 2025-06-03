@@ -1,18 +1,26 @@
 // apps/expo/app/_layout.tsx
+// apps/expo/app/(drawer)/(tabs)/(home)/_layout.tsx
+// apps/expo/app/_layout.tsx
 import { useEffect } from 'react'
-import { useColorScheme } from 'react-native'
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
+// import { useColorScheme } from 'react-native'
+// import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'
 import { SplashScreen, Stack } from 'expo-router' // Import Stack instead of Drawer
-import { Provider } from '#core/provider'
+// import { Provider } from '#core/provider'
 // import { NativeToast } from '@my/ui/src/NativeToast'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import DrawerLayout from './(drawer)/_layout'
 
 SplashScreen.preventAutoHideAsync()
 
+export const unstable_settings = {
+  // Ensure any route can link back to `/`
+  initialRouteName: "index"
+}
+
 export default function RootStackLayout() {
   // Renamed to reflect it's a Stack
-  const colorScheme = useColorScheme()
+  // const colorScheme = useColorScheme()
   const [fontsLoaded, fontError] = useFonts({
     // Your fonts
   })
@@ -28,20 +36,21 @@ export default function RootStackLayout() {
   }
 
   return (
-    <Provider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          >
-            <Stack.Screen name="(drawer)" />
-          </Stack>
-          {/* <NativeToast /> */}
-        </GestureHandlerRootView>
-      </ThemeProvider>
-    </Provider>
+    //<Provider>
+    // {/* <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}> */}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="(drawer)" />
+      </Stack>
+    </GestureHandlerRootView>
+    // {/* <NativeToast /> */}
+    // {/* </GestureHandlerRootView> */}
+    // {/* </ThemeProvider> */}
+    // {/* </Provider> */}
   )
 }
 

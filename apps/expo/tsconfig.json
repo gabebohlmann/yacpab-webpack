@@ -1,5 +1,6 @@
 // apps/expo/tsconfig.json
 {
+  "main": "expo-router/entry",
   "extends": "../../tsconfig.json",
   "include": [
     "app/**/*.ts",

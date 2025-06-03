@@ -1,5 +1,4 @@
 // apps/web/app/(drawer)/layout.tsx
-// apps/next/app/(drawer)/layout.tsx
 'use client'
 
 import React from 'react'
@@ -138,6 +137,7 @@ export default function DrawerLayout({
               // This line will be valid once TabNavigatorLayoutConfig in
               // packages/app/features/navigation/layout.tsx includes 'initialParams?: object;'
               initialParams={tabNavConfig.initialParams}
+
             />
           )
         } else if (screenOrNavConfig.type === 'screen') {

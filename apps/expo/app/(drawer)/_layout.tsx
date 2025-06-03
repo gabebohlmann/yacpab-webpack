@@ -53,7 +53,7 @@ function CustomDrawerHeaderLeft() {
   }
 }
 
-export default function AppDrawerLayout() {
+export default function DrawerLayout() {
   return (
     <Drawer
       screenOptions={{
@@ -69,6 +69,7 @@ export default function AppDrawerLayout() {
           // This 'title' is more of a fallback or for the drawer item label if it were visible.
           title: 'Vidream', // General title for the group
           drawerItemStyle: { display: 'none' },
+          headerShown: true,
         }}
       />
       <Drawer.Screen
@@ -83,6 +84,20 @@ export default function AppDrawerLayout() {
         options={{
           drawerLabel: 'Options',
           title: 'Options',
+        }}
+      />
+      <Drawer.Screen
+        name="account" // Path: app/(app)/options.tsx (ensure this file exists)
+        options={{
+          drawerLabel: 'Account',
+          title: 'Account',
+        }}
+      />
+      <Drawer.Screen
+        name="info" // Path: app/(app)/options.tsx (ensure this file exists)
+        options={{
+          drawerLabel: 'Info',
+          title: 'Info',
         }}
       />
     </Drawer>

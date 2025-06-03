@@ -1,4 +1,6 @@
 // apps/expo/app/(drawer)/(tabs)/_layout.tsx
+// apps/expo/app/(tabs)/_layout.tsx
+// apps/expo/app/(drawer)/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router'
 import { Text, useColorScheme } from 'react-native' // For icon rendering
 
