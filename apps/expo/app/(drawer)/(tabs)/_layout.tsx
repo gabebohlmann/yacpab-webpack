@@ -1,6 +1,4 @@
 // apps/expo/app/(drawer)/(tabs)/_layout.tsx
-// apps/expo/app/(tabs)/_layout.tsx
-// apps/expo/app/(drawer)/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router'
 import { Text, useColorScheme } from 'react-native' // For icon rendering
 
@@ -12,15 +10,10 @@ import {
 } from '#config/navigation/layout'
 
 // This is a simple TabBarIcon component.
-// In a real app, you'd use a proper icon library like @expo/vector-icons
-// and map `iconName` to the actual icon.
 const TabBarIcon = (props: { name?: string; focused: boolean; color: string }) => {
   if (!props.name) return null
   return (
     <PlaceholderIcon name={props.name} color={props.color} size={props.focused ? 26 : 24} />
-    // Example with a hypothetical Icon library:
-    // import { Ionicons } from '@expo/vector-icons';
-    // return <Ionicons name={props.name as any} size={24} color={props.color} />;
   )
 }
 
@@ -35,21 +28,30 @@ export default function TabLayout() {
     return <Text>Error: Tabs configuration missing.</Text>
   }
 
+  // FIX #1: Get the initial route name from the correct place in the config.
+  const originalInitialRouteName = tabsConfig.tabNavigatorOptions?.initialRouteName;
+
+  // And modify it to match the file path convention we are using for screens.
+  // If the config says 'home', the navigator needs to look for 'home/index'.
+  const initialRouteName = originalInitialRouteName
+    ? `${originalInitialRouteName}/index`
+    : undefined;
+
+  // FIX #2: Use the correct screenOptions for the tabs.
+  // `tabsConfig.tabNavigatorOptions.screenOptions` contains defaults for the screens inside the tabs.
+  // `tabsConfig.options` (which has 'Vidream Main') is for the tab navigator itself when it's a screen in the drawer.
+  const screenOptions = tabsConfig.tabNavigatorOptions?.screenOptions;
+
   return (
     <Tabs
-      initialRouteName={tabsConfig.initialRouteName}
-      screenOptions={{
-        // Global options for all tabs from the config
-        ...(tabsConfig.options as any), // Cast because Expo's TabNavigationOptions is specific
-        // Example of theme-dependent tab bar styling:
-        // tabBarActiveTintColor: colorScheme === 'dark' ? 'lightblue' : 'blue',
-        // tabBarStyle: { backgroundColor: colorScheme === 'dark' ? '#333' : '#FFF' },
-      }}
+      initialRouteName={initialRouteName}
+      screenOptions={screenOptions as any}
     >
       {tabsConfig.screens.map((screenConfig) => (
         <Tabs.Screen
           key={screenConfig.name}
-          name={screenConfig.name} // This name must match the file name in (tabs)/ e.g., "index.tsx", "account.tsx"
+          // The `name` prop for each screen must match its file path segment.
+          name={`${screenConfig.name}/index`}
           options={{
             ...(screenConfig.options as any), // Options specific to this tab screen
             tabBarIcon: ({ focused, color }) => (
@@ -59,8 +61,6 @@ export default function TabLayout() {
                 color={color}
               />
             ),
-            // Example: headerShown: screenConfig.options?.headerShown ?? false,
-            // title: screenConfig.options?.title,
           }}
         />
       ))}

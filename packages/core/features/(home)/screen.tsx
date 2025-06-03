@@ -1,3 +1,4 @@
+// packages/core/features/(home)/screen.tsx
 // packages/app/features/home/screen.tsx
 'use client';
 
