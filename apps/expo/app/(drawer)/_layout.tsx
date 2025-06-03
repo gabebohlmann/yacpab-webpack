@@ -1,214 +1,246 @@
 // apps/expo/app/(drawer)/_layout.tsx
 import { Drawer } from 'expo-router/drawer';
-import { useRouter, useNavigation, useSegments } from 'expo-router';
-import { Pressable, Text } from 'react-native';
-import { DrawerActions } from '@react-navigation/native';
+import { useRouter, Link, usePathname } from 'expo-router';
+import { Pressable, Text, View, useWindowDimensions, StyleSheet } from 'react-native';
+import { DrawerActions, useNavigationState } from '@react-navigation/native';
+import { DrawerContentScrollView, DrawerNavigationOptions  } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
 
-// Import navigation configuration
 import {
   findNavigatorLayout,
   DrawerNavigatorLayoutConfig,
   NavigationSchemaItem,
+  ScreenConfig,
+  TabNavigatorLayoutConfig,
 } from '#config/navigation/layout';
 
-// --- Placeholder Icons (can be replaced with a real icon library) ---
-const BackIcon = () => (
-  <Text style={{ fontSize: 16, marginLeft: 10, color: '#007AFF' }}>‹ Back</Text>
-);
-const HamburgerIcon = () => (
-  <Text style={{ fontSize: 24, marginLeft: 15, color: '#007AFF' }}>☰</Text>
-);
-// --- End Placeholder Icons ---
+// --- Icons ---
+const BackIcon = () => <Text style={styles.iconText}>‹ Back</Text>;
+const HamburgerIcon = () => <Text style={styles.iconTextHeader}>☰</Text>;
 
-/**
- * A custom header component that shows a "Back" button when possible,
- * or a hamburger menu icon to open the drawer.
- */
+function capitalizeFirstLetter(string: string) {
+  if (!string) return '';
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+// --- Updated CustomDrawerHeaderLeft ---
 function CustomDrawerHeaderLeft() {
+  const { width } = useWindowDimensions();
+  const platform: 'mobile' | 'desktop' = width < 768 ? 'mobile' : 'desktop';
+
   const router = useRouter();
-  const drawerNavigation = useNavigation();
-  const drawerState = drawerNavigation.getState();
-  const currentDrawerScreenName = drawerState.routes[drawerState.index]?.name;
+  const drawerNavigation = useNavigation(); // Standard React Navigation hook
 
-  const canGoBack = router.canGoBack();
+  // Get the name of the currently focused screen *within the Drawer navigator*
+  // This helps distinguish if we are on the '(tabs)' screen itself or another drawer screen.
+  const drawerNavigatorState = useNavigationState(state => state);
+  const currentScreenInDrawer = drawerNavigatorState?.routes[drawerNavigatorState.index]?.name;
 
-  // Show the back button if we are on a detail screen within the drawer
-  // and the global router has history.
-  if (currentDrawerScreenName !== '(tabs)' && canGoBack) {
-    return (
-      <Pressable onPress={() => router.back()} hitSlop={20} style={{ paddingHorizontal: 10 }}>
-        <BackIcon />
-      </Pressable>
-    );
-  } else {
-    // Otherwise, show the hamburger menu.
+  // On desktop, always show the hamburger menu
+  if (platform === 'desktop') {
     return (
       <Pressable
         onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
         hitSlop={20}
-        style={{ paddingHorizontal: 10 }}
+        style={styles.headerButton}
       >
         <HamburgerIcon />
       </Pressable>
     );
   }
+
+  // On mobile:
+  // If we are on the main '(tabs)' screen within the drawer, always show hamburger.
+  // The specific options for the '(tabs)' Drawer.Screen also ensure this.
+  if (currentScreenInDrawer === '(tabs)') {
+    return (
+      <Pressable
+        onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
+        hitSlop={20}
+        style={styles.headerButton}
+      >
+        <HamburgerIcon />
+      </Pressable>
+    );
+  }
+
+  // For other screens within the drawer on mobile (e.g., settings, account):
+  // Show "Back" if router.canGoBack() is true.
+  if (router.canGoBack()) {
+    return (
+      <Pressable onPress={() => router.back()} hitSlop={20} style={styles.headerButton}>
+        <BackIcon />
+      </Pressable>
+    );
+  }
+
+  // Fallback for other mobile screens if they cannot go back (e.g., if settings was initial route)
+  return (
+    <Pressable
+      onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
+      hitSlop={20}
+      style={styles.headerButton}
+    >
+      <HamburgerIcon />
+    </Pressable>
+  );
 }
 
-export default function DrawerLayout() {
-  // Find the drawer navigator configuration from the central layout file.
+interface CustomDrawerItemLinkProps {
+  label: string;
+  href: string;
+  currentPathname: string;
+  onCloseDrawer: () => void;
+}
+
+const CustomDrawerLink: React.FC<CustomDrawerItemLinkProps> = ({ label, href, currentPathname, onCloseDrawer }) => {
+  const isFocused = currentPathname === href ||
+    (href.endsWith('/index') && currentPathname.startsWith(href.slice(0, -6))) ||
+    currentPathname.startsWith(href);
+
+  return (
+    <Link href={href as any} asChild style={{ marginHorizontal: 0 }}>
+      <Pressable onPress={onCloseDrawer}>
+        {({ hovered, pressed }) => (
+          <View style={[
+            styles.drawerItem,
+            isFocused && styles.drawerItemFocused,
+            hovered && styles.drawerItemHovered,
+            pressed && styles.drawerItemPressed
+          ]}>
+            <Text style={[styles.drawerItemLabel, isFocused && styles.drawerItemLabelFocused]}>
+              {label}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Link>
+  );
+};
+
+function CustomDrawerContent(props: { navigation: any }) {
+  const { width } = useWindowDimensions();
+  const platform: 'mobile' | 'desktop' = width < 768 ? 'mobile' : 'desktop';
+  const currentPathname = usePathname();
+
+  const drawerConfig = findNavigatorLayout('(drawer)') as DrawerNavigatorLayoutConfig | undefined;
+  if (!drawerConfig) return null;
+
+  const renderableLinks: { label: string; href: string }[] = [];
+
+  if (platform === 'desktop') {
+    drawerConfig.screens.forEach(item => {
+      if (item.name === '(tabs)' && item.type === 'tabs') {
+        const tabsNav = item as TabNavigatorLayoutConfig;
+        if (tabsNav.showOn && !tabsNav.showOn.includes('desktop')) {
+          (tabsNav.screens || []).forEach(tabScreen => {
+            if (!tabScreen.showOn || tabScreen.showOn.includes('desktop')) {
+              const href = tabScreen.href || `/(drawer)/(tabs)/${tabScreen.name}`; // name is already like (home)/index
+              renderableLinks.push({
+                label: tabScreen.options?.drawerLabel || tabScreen.options?.title || capitalizeFirstLetter(tabScreen.name.replace(/\/index$/, '').replace(/^\(|\)$/g, '')),
+                href: href,
+              });
+            }
+          });
+        }
+      } else {
+        if (!item.showOn || item.showOn.includes('desktop')) {
+          // item.name is like "settings/index"
+          const href = (item as ScreenConfig).href || `/(drawer)/${item.name}`;
+          renderableLinks.push({
+            label: item.options?.drawerLabel || item.options?.title || capitalizeFirstLetter(item.name.replace(/\/index$/, '').replace(/^\(|\)$/g, '')),
+            href: href,
+          });
+        }
+      }
+    });
+  } else { // Mobile
+    drawerConfig.screens.forEach(item => {
+      if (!item.showOn || item.showOn.includes('mobile')) {
+        let href = (item as ScreenConfig).href;
+        if (!href) {
+          // For (tabs) navigator, or screen groups like (home) if they were direct drawer children.
+          // name is already like "(tabs)" or "settings/index"
+          href = `/(drawer)/${item.name}`;
+        }
+        renderableLinks.push({
+          label: item.options?.drawerLabel || item.options?.title || capitalizeFirstLetter(item.name.replace(/\/index$/, '').replace(/^\(|\)$/g, '')),
+          href: href,
+        });
+      }
+    });
+  }
+
+  return (
+    <DrawerContentScrollView {...props}>
+      <View style={styles.drawerHeader}>
+        <Text style={styles.drawerHeaderText}>Menu</Text>
+      </View>
+      {renderableLinks.map((linkInfo) => (
+        <CustomDrawerLink
+          key={linkInfo.href}
+          label={linkInfo.label}
+          href={linkInfo.href}
+          currentPathname={currentPathname}
+          onCloseDrawer={() => props.navigation.closeDrawer()}
+        />
+      ))}
+    </DrawerContentScrollView>
+  );
+}
+
+export default function ResponsiveDrawerLayout() {
   const drawerConfig = findNavigatorLayout('(drawer)') as DrawerNavigatorLayoutConfig | undefined;
 
-  if (!drawerConfig || drawerConfig.type !== 'drawer') {
-    console.error("Drawer configuration '(drawer)' not found or is not a drawer navigator!");
-    // Fallback or error display
+  if (!drawerConfig) {
     return <Text>Error: Drawer configuration missing.</Text>;
   }
 
-  // Combine screenOptions from the config with our required custom header.
-  const screenOptions = {
-    ...drawerConfig.drawerNavigatorOptions?.screenOptions,
+  const globalScreenOptions: DrawerNavigationOptions = {
+    ...(drawerConfig.drawerNavigatorOptions?.screenOptions || {}),
     headerShown: true,
-    headerLeft: () => <CustomDrawerHeaderLeft />,
+    headerLeft: () => <CustomDrawerHeaderLeft />, // Use the updated CustomDrawerHeaderLeft globally
+  };
+
+  const finalDrawerNavOptions = {
+    ...drawerConfig.drawerNavigatorOptions,
+    drawerContent: (props: any) => <CustomDrawerContent {...props} />,
+    // initialRouteName is '(tabs)' from your layout.tsx
   };
 
   return (
-    <Drawer
-      // Spread the navigator-specific options from the config
-      {...drawerConfig.drawerNavigatorOptions}
-      screenOptions={screenOptions}
-    >
-      {drawerConfig.screens.map((screenOrNavConfig: NavigationSchemaItem) => {
-        // The '(tabs)' screen is a special nested navigator.
-        // It does not need the '/index' suffix.
-        if (screenOrNavConfig.type === 'tabs') {
-          return (
-            <Drawer.Screen
-              key={screenOrNavConfig.name}
-              name={screenOrNavConfig.name} // e.g., "(tabs)"
-              options={screenOrNavConfig.options as any}
-            />
-          );
-        }
+    <Drawer {...finalDrawerNavOptions} screenOptions={globalScreenOptions}>
+      <Drawer.Screen
+        name="(tabs)"
+        options={(drawerConfig.screens.find(s => s.name === '(tabs)')?.options || {})}
+      // This screen will use the globalScreenOptions.headerLeft, which is CustomDrawerHeaderLeft.
+      // CustomDrawerHeaderLeft will correctly show hamburger for (tabs) on mobile.
+      />
 
-        // For regular screens, append '/index' to the name to match the
-        // file system convention (e.g., 'settings' -> 'settings/index').
-        if (screenOrNavConfig.type === 'screen') {
-          return (
-            <Drawer.Screen
-              key={screenOrNavConfig.name}
-              name={`${screenOrNavConfig.name}/index` as any}
-              options={screenOrNavConfig.options as any}
-            />
-          );
-        }
-
-        // Return null for any other type that shouldn't be rendered here.
-        return null;
-      })}
+      {drawerConfig.screens
+        .filter(item => item.name !== '(tabs)' && item.type === 'screen')
+        .map((screenItem: ScreenConfig) => (
+          <Drawer.Screen
+            key={`direct-screen-${screenItem.name}`}
+            name={screenItem.name} // This is already 'settings/index', 'options/index' etc.
+            options={(screenItem.options || {})}
+          // These will also use CustomDrawerHeaderLeft.
+          />
+        ))}
     </Drawer>
   );
 }
-// import { Drawer } from 'expo-router/drawer'
-// import { useRouter, useNavigation, useSegments } from 'expo-router' // useSegments can be for logging/debugging now
-// import { Pressable, Text } from 'react-native'
-// import { DrawerActions } from '@react-navigation/native' // Correct import for DrawerActions
 
-// // --- Placeholder Icons (ensure these are defined or imported) ---
-// const BackIcon = () => (
-//   <Text style={{ fontSize: 16, marginLeft: 10, color: '#007AFF' }}>‹ Back</Text>
-// )
-// const HamburgerIcon = () => (
-//   <Text style={{ fontSize: 24, marginLeft: 15, color: '#007AFF' }}>☰</Text>
-// )
-// // --- End Placeholder Icons ---
-
-// function CustomDrawerHeaderLeft() {
-//   const router = useRouter()
-//   // Get the navigation object for the current navigator (which is the Drawer)
-//   const drawerNavigation = useNavigation()
-//   const drawerState = drawerNavigation.getState()
-//   const currentDrawerScreenName = drawerState.routes[drawerState.index]?.name
-
-//   const canRouterGoBack = router.canGoBack() // Check global router history
-
-//   // For debugging, you can keep this or log these values:
-//   // const segments = useSegments();
-//   // console.log('CustomDrawerHeaderLeft:', { currentDrawerScreenName, canRouterGoBack, segments });
-
-//   // The logic:
-//   // If the Drawer's current active screen is NOT the one hosting the tabs (i.e., "(tabs)"),
-//   // AND the global router has a history to go back to, then show the back button.
-//   if (currentDrawerScreenName !== '(tabs)' && canRouterGoBack) {
-//     return (
-//       <Pressable
-//         onPress={() => router.back()}
-//         hitSlop={20}
-//         style={{ paddingLeft: 5, paddingRight: 10, justifyContent: 'center', height: '100%' }}
-//       >
-//         <BackIcon />
-//       </Pressable>
-//     )
-//   } else {
-//     // Otherwise (either on the (tabs) screen or cannot go back), show the hamburger menu.
-//     return (
-//       <Pressable
-//         onPress={() => drawerNavigation.dispatch(DrawerActions.toggleDrawer())}
-//         hitSlop={20}
-//         style={{ paddingLeft: 5, paddingRight: 10, justifyContent: 'center', height: '100%' }}
-//       >
-//         <HamburgerIcon />
-//       </Pressable>
-//     )
-//   }
-// }
-
-// export default function DrawerLayout() {
-//   return (
-//     <Drawer
-//       screenOptions={{
-//         headerShown: true,
-//         headerLeft: () => <CustomDrawerHeaderLeft />,
-//       }}
-//     >
-//       <Drawer.Screen
-//         name="(tabs)" // This is the screen in the Drawer that renders your Tab navigator
-//         options={{
-//           // The title displayed in the header when (tabs) is active will
-//           // actually come from the active tab screen's options inside app/(app)/(tabs)/_layout.tsx.
-//           // This 'title' is more of a fallback or for the drawer item label if it were visible.
-//           title: 'Vidream', // General title for the group
-//           drawerItemStyle: { display: 'none' },
-//           headerShown: true,
-//         }}
-//       />
-//       <Drawer.Screen
-//         name="settings/index"
-//         options={{
-//           drawerLabel: 'Settings',
-//           title: 'Settings',
-//         }}
-//       />
-//       <Drawer.Screen
-//         name="options/index"
-//         options={{
-//           drawerLabel: 'Options',
-//           title: 'Options',
-//         }}
-//       />
-//       <Drawer.Screen
-//         name="account/index"
-//         options={{
-//           drawerLabel: 'Account',
-//           title: 'Account',
-//         }}
-//       />
-//       <Drawer.Screen
-//         name="info/index"
-//         options={{
-//           drawerLabel: 'Info',
-//           title: 'Info',
-//         }}
-//       />
-//     </Drawer>
-//   )
-// }
+const styles = StyleSheet.create({
+  iconText: { fontSize: 16, marginLeft: 10, color: '#007AFF' },
+  iconTextHeader: { fontSize: 24, marginLeft: 15, color: '#007AFF' },
+  headerButton: { paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' }, // Added center
+  drawerHeader: { paddingHorizontal: 16, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#EFEFEF', marginBottom: 8 },
+  drawerHeaderText: { fontSize: 18, fontWeight: 'bold' },
+  drawerItem: { paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderRadius: 4, marginHorizontal: 8, marginVertical: 2 },
+  drawerItemFocused: { backgroundColor: 'rgba(0, 122, 255, 0.1)' },
+  drawerItemHovered: { backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+  drawerItemPressed: { backgroundColor: 'rgba(0, 0, 0, 0.08)' },
+  drawerItemLabel: { fontSize: 15, fontWeight: '500', color: '#1C1C1E' },
+  drawerItemLabelFocused: { color: '#007AFF', fontWeight: '600' },
+});

@@ -1,69 +1,100 @@
 // apps/expo/app/(drawer)/(tabs)/_layout.tsx
-import { Tabs } from 'expo-router'
-import { Text, useColorScheme } from 'react-native' // For icon rendering
-
-// Import navigation configuration and icon component
+import { Tabs, Redirect, Stack, usePathname } from 'expo-router';
+import { useWindowDimensions } from 'react-native';
 import {
   findNavigatorLayout,
   TabNavigatorLayoutConfig,
-  PlaceholderIcon,
-} from '#config/navigation/layout'
+  ScreenConfig,
+  // PlaceholderIcon, // Assuming you have or will add an icon component
+} from '#config/navigation/layout'; // Adjust path if needed
 
-// This is a simple TabBarIcon component.
-const TabBarIcon = (props: { name?: string; focused: boolean; color: string }) => {
-  if (!props.name) return null
-  return (
-    <PlaceholderIcon name={props.name} color={props.color} size={props.focused ? 26 : 24} />
-  )
+function capitalizeFirstLetter(string: string) {
+  if (!string) return '';
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme()
-  // Find the tab navigator configuration. The name '(tabs)' is by convention.
-  const tabsConfig = findNavigatorLayout('(tabs)') as TabNavigatorLayoutConfig | undefined
+  const { width } = useWindowDimensions();
+  const platform = width < 768 ? 'mobile' : 'desktop';
+  const pathname = usePathname();
+
+  const tabsConfig = findNavigatorLayout('(tabs)') as TabNavigatorLayoutConfig | undefined;
 
   if (!tabsConfig || tabsConfig.type !== 'tabs') {
-    console.error("Tabs configuration '(tabs)' not found or is not a tab navigator!")
-    // Fallback or error display
-    return <Text>Error: Tabs configuration missing.</Text>
+    console.error("TabLayout: Configuration for '(tabs)' not found.");
+    return <Stack.Screen options={{ title: 'Error: Tabs Config Missing', headerShown: true }} />;
   }
 
-  // FIX #1: Get the initial route name from the correct place in the config.
-  const originalInitialRouteName = tabsConfig.tabNavigatorOptions?.initialRouteName;
+  if (platform === 'desktop') {
+    // On desktop, this Tabs layout should not display its UI.
+    // It redirects to the screen that should be displayed in the main content area.
+    // The CustomDrawerContent in (drawer)/_layout.tsx will handle displaying the "flattened" items.
+    const initialTabScreenNameInConfig = tabsConfig.tabNavigatorOptions?.initialRouteName; // Should be "(home)/index"
+    let redirectHref: string | undefined;
 
-  // And modify it to match the file path convention we are using for screens.
-  // If the config says 'home', the navigator needs to look for 'home/index'.
-  const initialRouteName = originalInitialRouteName
-    ? `${originalInitialRouteName}/index`
-    : undefined;
+    if (initialTabScreenNameInConfig) {
+        const initialScreenDetail = tabsConfig.screens.find(s => s.name === initialTabScreenNameInConfig);
+        redirectHref = initialScreenDetail?.href || `/(drawer)/(tabs)/${initialTabScreenNameInConfig}`;
+    } else if (tabsConfig.screens.length > 0) {
+        const firstScreen = tabsConfig.screens[0];
+        redirectHref = firstScreen.href || `/(drawer)/(tabs)/${firstScreen.name}`;
+    }
 
-  // FIX #2: Use the correct screenOptions for the tabs.
-  // `tabsConfig.tabNavigatorOptions.screenOptions` contains defaults for the screens inside the tabs.
-  // `tabsConfig.options` (which has 'Vidream Main') is for the tab navigator itself when it's a screen in the drawer.
-  const screenOptions = tabsConfig.tabNavigatorOptions?.screenOptions;
+    if (redirectHref) {
+      if (pathname === `/(drawer)/(tabs)` || pathname === `/(drawer)/(tabs)/`) {
+        console.log(`Desktop: Redirecting from (tabs) base to ${redirectHref}`);
+        return <Redirect href={redirectHref} />;
+      }
+      // If already on a child route of (tabs) (e.g., /(drawer)/(tabs)/(home)/index),
+      // this layout acts as a group route, allowing the child to render.
+      console.log(`Desktop: (tabs)/_layout.tsx acting as group for ${pathname}`);
+      return <Stack screenOptions={{ headerShown: false }} />;
+    } else {
+      console.warn("Desktop: No initial screen found for (tabs) redirect. Fallback.");
+      return <Redirect href="/(drawer)/settings/index" />;
+    }
+  }
 
+  // --- Mobile: Render the Tabs navigator ---
   return (
     <Tabs
-      initialRouteName={initialRouteName}
-      screenOptions={screenOptions as any}
+      screenOptions={{
+        headerShown: false, // The Drawer navigator provides the main header
+        ...(tabsConfig.tabNavigatorOptions?.screenOptions || {}),
+      }}
+      // initialRouteName now directly matches the 'name' from your config
+      initialRouteName={tabsConfig.tabNavigatorOptions?.initialRouteName}
     >
-      {tabsConfig.screens.map((screenConfig) => (
-        <Tabs.Screen
-          key={screenConfig.name}
-          // The `name` prop for each screen must match its file path segment.
-          name={`${screenConfig.name}/index`}
-          options={{
-            ...(screenConfig.options as any), // Options specific to this tab screen
-            tabBarIcon: ({ focused, color }) => (
-              <TabBarIcon
-                name={screenConfig.options?.tabBarIconName}
-                focused={focused}
-                color={color}
-              />
-            ),
-          }}
-        />
-      ))}
+      {(tabsConfig.screens || []).map((screen: ScreenConfig) => {
+        // screen.name is now like '(home)/index', 'subs/index' from your config
+        const cleanBaseName = screen.name
+          .replace(/\/index$/, '')
+          .replace(/^\(|\)$/g, '');
+
+        const screenOptionsFromConfig = screen.options || {};
+
+        return (
+          <Tabs.Screen
+            key={screen.name}
+            // The 'name' prop uses the name directly from your config
+            // This matches how expo-router finds files like app/(drawer)/(tabs)/(home)/index.tsx
+            name={screen.name} 
+            options={{
+              ...screenOptionsFromConfig,
+              title: screenOptionsFromConfig.title || capitalizeFirstLetter(cleanBaseName),
+              tabBarLabel: screenOptionsFromConfig.tabBarLabel || screenOptionsFromConfig.title || capitalizeFirstLetter(cleanBaseName),
+              // Example for tabBarIcon:
+              // tabBarIcon: ({ color, focused }) => (
+              //   <PlaceholderIcon
+              //     name={screenOptionsFromConfig.tabBarIconName || cleanBaseName}
+              //     color={color}
+              //     size={24}
+              //   />
+              // ),
+            }}
+          />
+        );
+      })}
     </Tabs>
-  )
+  );
 }

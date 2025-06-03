@@ -62,6 +62,7 @@ export interface ScreenConfig {
     options?: ScreenOptionsConfig;
     href?: string;
     initialParams?: object;
+    showOn?: ('mobile' | 'desktop')[];
 }
 // --- Tab Navigator Specific Types ---
 /**
@@ -80,6 +81,7 @@ export interface TabNavigatorLayoutConfig {
     options?: ScreenOptionsConfig; // Options for this Tab Navigator when it acts as a screen in a parent
     tabNavigatorOptions?: TabNavigatorPropsForNavigatorItself; // Props for the <Tab.Navigator> itself
     initialParams?: object;
+    showOn?: ('mobile' | 'desktop')[];
 }
 // --- Drawer Navigator Specific Types ---
 /**
@@ -110,6 +112,7 @@ export interface DrawerNavigatorLayoutConfig {
     options?: ScreenOptionsConfig; // Options for this Drawer Navigator when it acts as a screen
     drawerNavigatorOptions?: DrawerNavigatorPropsForNavigatorItself; // Props for the <Drawer.Navigator>
     initialParams?: object;
+    showOn?: ('mobile' | 'desktop')[];
 }
 // --- Stack Navigator Specific Types ---
 /**
@@ -179,6 +182,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                     {
                         type: 'tabs',
                         name: '(tabs)',
+                        showOn: ['mobile'],  
                         options: {
                             // Options for (tabs) *as a screen/item* within the '(drawer)'
                             title: 'Vidream Main',
@@ -187,7 +191,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                         },
                         tabNavigatorOptions: {
                             // Props for the <Tabs.Navigator> for '(tabs)'
-                            initialRouteName: '(home)',
+                            initialRouteName: '(home)/index',
                             screenOptions: {
                                 // Default screen options for screens *within* these Tabs
                                 headerShown: false,
@@ -196,53 +200,58 @@ export const appNavigationStructure: NavigatorLayout[] = [
                         screens: [
                             {
                                 type: 'screen',
-                                name: '(home)',
+                                name: '(home)/index',
                                 component: HomeScreen,
                                 href: '/',
                                 options: {
                                     title: 'Home',
                                     tabBarIconName: 'home',
                                     tabBarLabel: 'Home',
+                                    drawerLabel: 'Home',
+                                    
                                 },
                             },
                             {
                                 type: 'screen',
-                                name: 'subs',
+                                name: 'subs/index',
                                 component: SubsScreen,
                                 href: '/subs',
                                 options: {
                                     title: 'Subscriptions',
                                     tabBarIconName: 'subscriptions',
                                     tabBarLabel: 'Subscriptions',
+                                    drawerLabel: 'Subscriptions',
                                 },
                             },
                             {
                                 type: 'screen',
-                                name: 'profile',
+                                name: 'profile/index',
                                 component: ProfileScreen,
                                 href: '/profile',
                                 options: {
                                     title: 'Profile',
                                     tabBarIconName: 'person',
                                     tabBarLabel: 'Profile',
+                                    drawerLabel: 'Profile',
                                 },
                             },
                             {
                                 type: 'screen',
-                                name: 'trending',
+                                name: 'trending/index',
                                 component: TrendingScreen,
                                 href: '/trending',
                                 options: {
                                     title: 'Trending',
                                     tabBarIconName: 'trending',
                                     tabBarLabel: 'Trending',
+                                    drawerLabel: 'Trending',
                                 },
                             },
                         ]
                     },
                     {
                         type: 'screen',
-                        name: 'settings',
+                        name: 'settings/index',
                         component: SettingsScreen,
                         href: '/settings',
                         options: {
@@ -252,7 +261,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                     },
                     {
                         type: 'screen',
-                        name: 'options',
+                        name: 'options/index',
                         component: OptionsScreen,
                         href: '/options',
                         options: {
@@ -262,7 +271,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                     },
                     {
                         type: 'screen',
-                        name: 'account',
+                        name: 'account/index',
                         component: AccountScreen,
                         href: '/account',
                         options: {
@@ -272,7 +281,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                     },
                     {
                         type: "screen",
-                        name: "info",
+                        name: "info/index",
                         component: InfoScreen,
                         href: "/info",
                         options: {
@@ -282,7 +291,7 @@ export const appNavigationStructure: NavigatorLayout[] = [
                     },
                     {
                         type: "screen",
-                        name: "contact",
+                        name: "contact/index",
                         component: ContactScreen,
                         href: "/contact",
                         options: {
