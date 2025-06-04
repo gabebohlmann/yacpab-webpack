@@ -1,0 +1,699 @@
+<!-- packages/sync-nav/gui.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Nav GUI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px; 
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="text"],
+        select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="text"]:focus,
+        select:focus {
+            border-color: #007AFF;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+        }
+        .item-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .item-row input[type="text"] {
+            flex-grow: 1;
+            width: auto; 
+        }
+        .item-row button.remove-item {
+            padding: 8px 12px;
+            font-size: 12px;
+            background-color: #e74c3c;
+            width: auto;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .item-row button.remove-item:hover {
+            background-color: #c0392b;
+        }
+        .add-item-btn {
+            background-color: #2ecc71;
+            color: white;
+            padding: 10px 15px;
+            font-size: 14px;
+            width: auto;
+            margin-bottom:15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .add-item-btn:hover {
+            background-color: #27ae60;
+        }
+
+        button#submitAllScreens { 
+            background-color: #007AFF;
+            margin-top: 20px;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+            width: 100%;
+        }
+        button#submitAllScreens:hover {
+            background-color: #005bb5;
+        }
+        
+        #cliOutput {
+            margin-top: 25px;
+            background-color: #2c3e50;
+            color: #e0e0e0;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Menlo', 'Consolas', monospace;
+            font-size: 14px;
+            border: 1px solid #444;
+        }
+        .loading-indicator, .error-message { 
+            display: none; text-align: center; padding: 10px; font-style: italic;
+        }
+        .error-message { color: #d9534f; background-color: #f2dede; border: 1px solid #ebccd1; padding: 10px; border-radius: 4px; margin-top: 15px;}
+
+        /* --- Device Preview Styles --- */
+        .device-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .device-controls button { width: auto; padding: 8px 15px; font-size: 14px; background-color: #555; color:white; border:none; border-radius:4px; cursor:pointer; }
+        .device-controls button.active { background-color: #007AFF; }
+        .device-mock-container { display: flex; justify-content: center; align-items: flex-start; padding: 20px; background-color: #e9ecef; border-radius: 8px; min-height: 520px; }
+        
+        .device-mock { 
+            background-color: #777; 
+            padding: 15px; 
+            border-radius: 20px; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.2), inset 0 0 5px rgba(0,0,0,0.3); 
+            display: flex; 
+            transition: width 0.3s ease-in-out;
+            position: relative; 
+        }
+        .app-sidebar { 
+            position: absolute; 
+            top: 0;
+            left: 0;
+            height: 100%; /* Take full height of the mock device */
+            width: 0; 
+            background-color: #f0f0f0; 
+            overflow: hidden; 
+            transition: width 0.3s ease-in-out, padding 0.3s ease-in-out; 
+            border-right: 1px solid #ccc; 
+            box-sizing: border-box;
+            z-index: 1000; 
+            padding: 0; 
+            display: flex; /* For positioning close button */
+            flex-direction: column;
+        }
+        .app-sidebar.visible { 
+            width: 180px; 
+            padding-top: 10px; /* Adjust padding to make space for close button */
+            padding-left: 15px;
+            padding-right: 15px;
+            padding-bottom: 15px;
+        }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .close-sidebar-icon {
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            display: none; /* Hidden by default, shown by JS for mobile/tablet */
+            color: #333;
+        }
+        .app-sidebar.visible .close-sidebar-icon {
+             /* JS will control display based on device size */
+        }
+
+        .app-sidebar ul { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto;}
+        .app-sidebar li { padding: 10px 5px; border-bottom: 1px solid #e0e0e0; cursor: pointer; font-size:14px; word-break: break-all; }
+        .app-sidebar li:hover { background-color: #e9e9e9; }
+        .app-sidebar li.active-drawer-item { background-color: #d0e0ff; font-weight: bold;}
+
+        .device-screen { background-color: #fff; overflow: hidden; display: flex; flex-direction: column; position: relative; flex-grow: 1; height: 480px; border-radius: 5px; }
+        .app-header { background-color: #f8f8f8; padding: 10px 15px; border-bottom: 1px solid #ddd; display: flex; align-items: center; min-height: 44px; }
+        .app-header .menu-icon { font-size: 24px; cursor: pointer; margin-right: 10px; }
+        .app-header .title { font-weight: 600; font-size: 17px; }
+        .app-content { flex-grow: 1; padding: 15px; overflow-y: auto; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .app-bottom-tabs { display: flex; border-top: 1px solid #ccc; background-color: #f8f8f8; }
+        .app-bottom-tabs .tab-item { flex: 1; padding: 8px 5px; text-align: center; cursor: pointer; font-size: 10px; color: #8e8e93; border-left: 1px solid #eee; }
+        .app-bottom-tabs .tab-item:first-child { border-left: none; }
+        .app-bottom-tabs .tab-item.active { color: #007AFF; background-color: #e0e8ff;}
+        .app-bottom-tabs .tab-item .icon { font-size: 20px; display: block; margin-bottom: 2px; }
+
+        .device-mock.phone-size { width: 320px; }
+        .device-mock.phone-size .device-screen { height: 480px; }
+        .device-mock.tablet-size { width: 600px; }
+        .device-mock.tablet-size .device-screen { height: 720px; }
+        .device-mock.tablet-size .app-sidebar.visible { width: 220px; }
+        
+        .device-mock.desktop-size { 
+            width: 100%; 
+            max-width: 1000px; 
+            padding: 0; 
+            border-radius: 5px; 
+            background-color: #fff; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        }
+        .device-mock.desktop-size .device-screen { 
+            height: 600px; 
+            border-radius: 5px; 
+        }
+        .device-mock.desktop-size .app-sidebar { 
+            position: static; 
+            width: 240px; 
+            padding: 15px; 
+            border-right: 1px solid #ddd; 
+            height: auto; 
+            z-index: 1; /* Lower z-index for static sidebar */
+        }
+        .device-mock.desktop-size .app-header .menu-icon { display: none; }
+        .device-mock.desktop-size .app-bottom-tabs { display: none; }
+        .device-mock.desktop-size .app-sidebar .close-sidebar-icon { display: none !important; } /* Ensure close icon is hidden on desktop */
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sync Nav GUI</h1>
+
+        <div class="section preview-section">
+            <h3>App Layout Preview</h3>
+            <div class="device-controls">
+                <button id="phoneBtn" class="active">Phone</button>
+                <button id="tabletBtn">Tablet</button>
+                <button id="desktopBtn">Desktop</button>
+            </div>
+            <div class="device-mock-container">
+                <div class="device-mock phone-size">
+                    <div class="app-sidebar" id="appSidebar">
+                        <div class="sidebar-header">
+                            <h4>Drawer Menu</h4>
+                            <span class="close-sidebar-icon" id="closeSidebarIcon">✕</span>
+                        </div>
+                        <ul id="previewDrawerItems">
+                            {/* Drawer items will be populated here */}
+                        </ul>
+                    </div>
+                    <div class="device-screen" id="deviceScreen">
+                        <div class="app-header">
+                            <span class="menu-icon" id="menuIcon">☰</span>
+                            <span class="title" id="appHeaderTitle">Home</span>
+                        </div>
+                        <div class="app-content" id="appContent">
+                            <p>Welcome! Configure screens below and see them here.</p>
+                        </div>
+                        <div class="app-bottom-tabs" id="appBottomTabs">
+                            {/* Content dynamically generated by updatePreview */}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section form-section">
+            <h3>Configure Screens to Add</h3>
+            
+            <div class="form-group">
+                <h4>Tab Items</h4>
+                <div id="tabItemsContainer"></div>
+                <button class="add-item-btn" id="addTabItemBtn">Add Tab Item</button>
+            </div>
+
+            <div class="form-group">
+                <h4>Drawer Items (Direct)</h4>
+                <div id="drawerItemsContainer"></div>
+                <button class="add-item-btn" id="addDrawerItemBtn">Add Drawer Item</button>
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="useDefaultsForAll" name="useDefaultsForAll" checked>
+                <label for="useDefaultsForAll">Use default configurations for all new screens?</label>
+            </div>
+            
+            <button id="submitAllScreens">Process All Added Screens</button>
+        </div>
+
+        <div id="loadingIndicator" class="loading-indicator">Processing...</div>
+        <div id="errorMessage" class="error-message"></div>
+        
+        <div class="section cli-output-section">
+            <h2>CLI Output:</h2>
+            <pre id="cliOutput">Awaiting command...</pre>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const tabItemsContainer = document.getElementById('tabItemsContainer');
+        const drawerItemsContainer = document.getElementById('drawerItemsContainer');
+        const addTabItemBtn = document.getElementById('addTabItemBtn');
+        const addDrawerItemBtn = document.getElementById('addDrawerItemBtn');
+        
+        const useDefaultsForAllCheckbox = document.getElementById('useDefaultsForAll');
+        const submitAllScreensButton = document.getElementById('submitAllScreens');
+        const cliOutputDiv = document.getElementById('cliOutput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessageDiv = document.getElementById('errorMessage');
+
+        // Preview elements
+        const deviceMock = document.querySelector('.device-mock');
+        const appSidebar = document.getElementById('appSidebar');
+        const menuIcon = document.getElementById('menuIcon');
+        const closeSidebarIcon = document.getElementById('closeSidebarIcon'); // New close icon
+        const appContent = document.getElementById('appContent');
+        const appHeaderTitle = document.getElementById('appHeaderTitle');
+        const previewDrawerItemsUl = document.getElementById('previewDrawerItems'); // Get existing UL
+        
+        const appBottomTabsContainer = document.getElementById('appBottomTabs');
+        const deviceControlButtons = {
+            phone: document.getElementById('phoneBtn'),
+            tablet: document.getElementById('tabletBtn'),
+            desktop: document.getElementById('desktopBtn'),
+        };
+        let currentDeviceSize = 'phone'; 
+
+        // --- Helper Functions ---
+        function sanitizeForSegment(name) {
+            return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-()_]/gi, '');
+        }
+
+        function capitalizeFirstLetter(string) {
+            if (!string) return '';
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+        
+        let itemIdCounter = 0;
+
+        // --- Dynamic Item Entry ---
+        function createItemInputRow(type) { 
+            itemIdCounter++;
+            const itemRow = document.createElement('div');
+            itemRow.classList.add('item-row');
+            itemRow.dataset.itemId = itemIdCounter;
+            itemRow.dataset.itemType = type;
+
+            const segmentInput = document.createElement('input');
+            segmentInput.type = 'text';
+            segmentInput.placeholder = 'Screen Segment (e.g., newProfile)';
+            segmentInput.classList.add('item-segment-name');
+            segmentInput.addEventListener('input', updatePreview);
+
+            const labelInput = document.createElement('input');
+            labelInput.type = 'text';
+            labelInput.placeholder = 'Display Label (e.g., My Profile)';
+            labelInput.classList.add('item-display-label');
+            labelInput.addEventListener('input', updatePreview);
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = 'Remove';
+            removeBtn.classList.add('remove-item');
+            removeBtn.type = 'button'; 
+            removeBtn.onclick = () => {
+                itemRow.remove();
+                updatePreview();
+            };
+
+            itemRow.appendChild(segmentInput);
+            itemRow.appendChild(labelInput);
+            itemRow.appendChild(removeBtn);
+            return itemRow;
+        }
+
+        addTabItemBtn.addEventListener('click', () => {
+            tabItemsContainer.appendChild(createItemInputRow('tab'));
+            updatePreview();
+        });
+
+        addDrawerItemBtn.addEventListener('click', () => {
+            drawerItemsContainer.appendChild(createItemInputRow('drawer'));
+            updatePreview();
+        });
+
+        // --- Preview Logic ---
+        function updatePreview() {
+            // Ensure previewDrawerItemsUl exists before clearing
+            if (previewDrawerItemsUl) {
+                 previewDrawerItemsUl.innerHTML = ''; // Clear only list items, keep h4
+            } else {
+                console.error("previewDrawerItemsUl not found");
+                return;
+            }
+            appBottomTabsContainer.innerHTML = '';
+
+            const currentSelectedTabSegment = appContent.dataset.currentTabSegment || null;
+            const currentSelectedDrawerSegment = appContent.dataset.currentDrawerSegment || null;
+            let activeContentSet = false;
+            
+            const tabItemRows = tabItemsContainer.querySelectorAll('.item-row');
+            const drawerItemRows = drawerItemsContainer.querySelectorAll('.item-row');
+
+            if (currentDeviceSize === 'desktop') {
+                appSidebar.classList.add('visible');
+                if (menuIcon) menuIcon.style.display = 'none';
+                if (closeSidebarIcon) closeSidebarIcon.style.display = 'none'; // Hide close icon in sidebar on desktop
+                appBottomTabsContainer.style.display = 'none';
+
+                tabItemRows.forEach(row => {
+                    const segment = row.querySelector('.item-segment-name').value.trim();
+                    const label = row.querySelector('.item-display-label').value.trim() || capitalizeFirstLetter(segment) || 'Tab Item';
+                    if (segment) {
+                        const li = document.createElement('li');
+                        li.textContent = label;
+                        li.dataset.itemSegment = segment; 
+                        li.dataset.itemType = 'promoted-tab';
+                        li.dataset.content = `${label} content (from Tab inputs, shown in Drawer).`;
+                        li.dataset.title = label;
+                        li.onclick = handlePreviewItemClick;
+                        if (currentSelectedDrawerSegment === segment) {
+                            li.classList.add('active-drawer-item');
+                            if (!activeContentSet) {
+                                appContent.innerHTML = `<p>${li.dataset.content}</p>`;
+                                appHeaderTitle.textContent = li.dataset.title;
+                                activeContentSet = true;
+                            }
+                        }
+                        previewDrawerItemsUl.appendChild(li);
+                    }
+                });
+
+                drawerItemRows.forEach(row => {
+                    const segment = row.querySelector('.item-segment-name').value.trim();
+                    const label = row.querySelector('.item-display-label').value.trim() || capitalizeFirstLetter(segment) || 'Drawer Item';
+                    if (segment) {
+                        const li = document.createElement('li');
+                        li.textContent = label;
+                        li.dataset.itemSegment = segment;
+                        li.dataset.itemType = 'direct-drawer';
+                        li.dataset.content = `${label} content (from Drawer inputs).`;
+                        li.dataset.title = label;
+                        li.onclick = handlePreviewItemClick;
+                        if (currentSelectedDrawerSegment === segment) {
+                            li.classList.add('active-drawer-item');
+                             if (!activeContentSet) {
+                                appContent.innerHTML = `<p>${li.dataset.content}</p>`;
+                                appHeaderTitle.textContent = li.dataset.title;
+                                activeContentSet = true;
+                            }
+                        }
+                        previewDrawerItemsUl.appendChild(li);
+                    }
+                });
+
+            } else { // Mobile or Tablet
+                if (menuIcon) menuIcon.style.display = 'block';
+                if (closeSidebarIcon) closeSidebarIcon.style.display = appSidebar.classList.contains('visible') ? 'block' : 'none';
+                appBottomTabsContainer.style.display = 'flex';
+
+                drawerItemRows.forEach(row => {
+                    const segment = row.querySelector('.item-segment-name').value.trim();
+                    const label = row.querySelector('.item-display-label').value.trim() || capitalizeFirstLetter(segment) || 'Drawer Item';
+                     if (segment) {
+                        const li = document.createElement('li');
+                        li.textContent = label;
+                        li.dataset.itemSegment = segment;
+                        li.dataset.itemType = 'direct-drawer';
+                        li.dataset.content = `${label} content (from Drawer inputs).`;
+                        li.dataset.title = label;
+                        li.onclick = handlePreviewItemClick;
+                        if (currentSelectedDrawerSegment === segment) {
+                            li.classList.add('active-drawer-item');
+                            if (!activeContentSet) {
+                                appContent.innerHTML = `<p>${li.dataset.content}</p>`;
+                                appHeaderTitle.textContent = li.dataset.title;
+                                activeContentSet = true;
+                            }
+                        }
+                        previewDrawerItemsUl.appendChild(li);
+                    }
+                });
+
+                tabItemRows.forEach((row, index) => {
+                    const segment = row.querySelector('.item-segment-name').value.trim();
+                    const label = row.querySelector('.item-display-label').value.trim() || capitalizeFirstLetter(segment) || `Tab ${index + 1}`;
+                    if (segment) {
+                        const tabDiv = document.createElement('div');
+                        tabDiv.classList.add('tab-item');
+                        tabDiv.innerHTML = `<span class="icon">📄</span> ${label}`;
+                        tabDiv.dataset.itemSegment = segment;
+                        tabDiv.dataset.itemType = 'tab';
+                        tabDiv.dataset.content = `${label} content (from Tab inputs).`;
+                        tabDiv.dataset.title = label;
+                        tabDiv.onclick = handlePreviewItemClick;
+                        
+                        if ((!activeContentSet && index === 0 && !currentSelectedTabSegment && !currentSelectedDrawerSegment) || (currentSelectedTabSegment === segment)) {
+                            tabDiv.classList.add('active');
+                            if (!activeContentSet) {
+                                appContent.innerHTML = `<p>${tabDiv.dataset.content}</p>`;
+                                appHeaderTitle.textContent = tabDiv.dataset.title;
+                                activeContentSet = true;
+                            }
+                        }
+                        appBottomTabsContainer.appendChild(tabDiv);
+                    }
+                });
+            }
+            
+            if (!activeContentSet) {
+                appHeaderTitle.textContent = 'Preview';
+                appContent.innerHTML = '<p>Add items to see them here. Click an item to view its content.</p>';
+            }
+        }
+
+        function handlePreviewItemClick(event) {
+            const targetItem = event.currentTarget;
+            const segment = targetItem.dataset.itemSegment; 
+            const type = targetItem.dataset.itemType;
+
+            appHeaderTitle.textContent = targetItem.dataset.title || "Screen";
+            appContent.innerHTML = `<p>${targetItem.dataset.content || "Content not set."}</p>`;
+            
+            appContent.dataset.currentTabSegment = ''; 
+            appContent.dataset.currentDrawerSegment = ''; 
+
+            document.querySelectorAll('#appBottomTabs .tab-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('#previewDrawerItems li').forEach(item => item.classList.remove('active-drawer-item'));
+
+            if (type === 'tab') {
+                targetItem.classList.add('active');
+                appContent.dataset.currentTabSegment = segment;
+            } else if (type === 'promoted-tab' || type === 'direct-drawer') {
+                targetItem.classList.add('active-drawer-item');
+                appContent.dataset.currentDrawerSegment = segment;
+            }
+
+            if (currentDeviceSize !== 'desktop' && appSidebar.classList.contains('visible')) {
+                appSidebar.classList.remove('visible');
+                if (closeSidebarIcon) closeSidebarIcon.style.display = 'none';
+            }
+        }
+        
+        // Device Size Controls
+        function setDeviceSize(size) {
+            currentDeviceSize = size;
+            deviceMock.classList.remove('phone-size', 'tablet-size', 'desktop-size');
+            deviceMock.classList.add(`${size}-size`);
+            Object.values(deviceControlButtons).forEach(btn => btn.classList.remove('active'));
+            if (deviceControlButtons[size]) deviceControlButtons[size].classList.add('active');
+            
+            if (size === 'desktop') {
+                appSidebar.classList.add('visible'); 
+                if (closeSidebarIcon) closeSidebarIcon.style.display = 'none';
+            } else {
+                // For mobile/tablet, visibility is toggled, update close icon accordingly
+                if (closeSidebarIcon) closeSidebarIcon.style.display = appSidebar.classList.contains('visible') ? 'block' : 'none';
+            }
+            updatePreview(); 
+        }
+
+        menuIcon.addEventListener('click', () => {
+            if (currentDeviceSize !== 'desktop') { 
+                appSidebar.classList.toggle('visible');
+                if (closeSidebarIcon) closeSidebarIcon.style.display = appSidebar.classList.contains('visible') ? 'block' : 'none';
+            }
+        });
+        // New Close Sidebar Icon Event Listener
+        if (closeSidebarIcon) {
+            closeSidebarIcon.addEventListener('click', () => {
+                appSidebar.classList.remove('visible');
+                closeSidebarIcon.style.display = 'none';
+            });
+        }
+
+        deviceControlButtons.phone.addEventListener('click', () => setDeviceSize('phone'));
+        deviceControlButtons.tablet.addEventListener('click', () => setDeviceSize('tablet'));
+        deviceControlButtons.desktop.addEventListener('click', () => setDeviceSize('desktop'));
+        
+        // --- CLI Submission Logic ---
+        submitAllScreensButton.addEventListener('click', async () => {
+            const tabItems = Array.from(tabItemsContainer.querySelectorAll('.item-row')).map(row => {
+                const segment = row.querySelector('.item-segment-name').value.trim();
+                const label = row.querySelector('.item-display-label').value.trim();
+                return { segment, label, type: 'tab' };
+            }).filter(item => item.segment);
+
+            const drawerItems = Array.from(drawerItemsContainer.querySelectorAll('.item-row')).map(row => {
+                const segment = row.querySelector('.item-segment-name').value.trim();
+                const label = row.querySelector('.item-display-label').value.trim();
+                return { segment, label, type: 'drawer' };
+            }).filter(item => item.segment);
+
+            if (tabItems.length === 0 && drawerItems.length === 0) {
+                alert('Please add at least one tab or drawer item.');
+                return;
+            }
+
+            const useDefaults = useDefaultsForAllCheckbox.checked;
+            
+            cliOutputDiv.textContent = ''; 
+            errorMessageDiv.style.display = 'none';
+            loadingIndicator.style.display = 'block';
+            submitAllScreensButton.disabled = true;
+
+            const payload = {
+                useDefaultsForAll: useDefaults,
+                itemsToAdd: []
+            };
+
+            if (tabItems.length > 0) {
+                payload.itemsToAdd.push({
+                    parentChoice: { name: '(tabs)', type: 'tabs' },
+                    screens: tabItems.map(item => ({ 
+                        name: item.segment, 
+                        customTitle: item.label || capitalizeFirstLetter(item.segment) 
+                    }))
+                });
+            }
+            if (drawerItems.length > 0) {
+                 payload.itemsToAdd.push({
+                    parentChoice: { name: '(drawer)', type: 'drawer' },
+                    screens: drawerItems.map(item => ({ 
+                        name: item.segment, 
+                        customTitle: item.label || capitalizeFirstLetter(item.segment)
+                    }))
+                });
+            }
+            
+            console.log("Payload to server:", JSON.stringify(payload, null, 2));
+
+            try {
+                const response = await fetch('/api/add-screens', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                loadingIndicator.style.display = 'none';
+                submitAllScreensButton.disabled = false;
+                const result = await response.json(); 
+                
+                if (response.ok && result.success) {
+                    cliOutputDiv.textContent = result.output || 'Batch command executed successfully.';
+                    if(result.error) {
+                        cliOutputDiv.textContent += `\n\nSERVER-REPORTED PARTIAL ERROR:\n${result.error}`;
+                    }
+                    tabItemsContainer.innerHTML = '';
+                    drawerItemsContainer.innerHTML = '';
+                    updatePreview();
+
+                } else {
+                    const errorMsg = result.message || result.error || 'Unknown server error.';
+                    cliOutputDiv.textContent = `Error: ${errorMsg}`;
+                    errorMessageDiv.textContent = `Server Error: ${errorMsg}`;
+                    errorMessageDiv.style.display = 'block';
+                }
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                submitAllScreensButton.disabled = false;
+                cliOutputDiv.textContent = `Fetch Error: ${error.message}`;
+                errorMessageDiv.textContent = `Network or Fetch Error: ${error.message}. Is the server running?`;
+                errorMessageDiv.style.display = 'block';
+                console.error('Error submitting screens:', error);
+            }
+        });
+
+        // Initialize
+        // Ensure previewDrawerItemsUl is correctly initialized before calling updatePreview
+        if (!document.getElementById('previewDrawerItems')) { // Check if it wasn't appended
+            const newUl = document.createElement('ul');
+            newUl.id = 'previewDrawerItems';
+            appSidebar.appendChild(newUl);
+            // Re-assign if it was null
+            // This is a defensive check; it should have been appended earlier.
+        }
+
+
+        setDeviceSize('phone');
+        updatePreview(); 
+
+    </script>
+</body>
+</html>
