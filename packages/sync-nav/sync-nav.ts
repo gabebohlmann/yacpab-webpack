@@ -1,4 +1,3 @@
-// packages/sync-nav/sync-nav.ts
 #!/usr/bin/env node
 
 const chokidar = require('chokidar')
