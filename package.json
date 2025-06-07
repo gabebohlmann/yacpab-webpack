@@ -12,6 +12,8 @@
     "build:web": "rm -rf dist/ && webpack --mode=production --config webpack.config.js --progress",
     "web": "cd apps/web && yarn web",
     "native": "cd apps/expo && yarn start",
+    "sync-nav": "cd packages/sync-nav && yarn start",
+    "sync-gui": "cd packages/sync-nav && yarn start gui",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"

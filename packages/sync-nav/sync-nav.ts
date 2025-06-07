@@ -11,7 +11,7 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 
 // Determine MONOREPO_ROOT
-const MONOREPO_ROOT = path.join(process.cwd(), '../..')
+const MONOREPO_ROOT = path.join(process.cwd(), "../..")
 console.log(`CLI operating with MONOREPO_ROOT: ${MONOREPO_ROOT}`)
 
 const git = simpleGit({ baseDir: MONOREPO_ROOT })
@@ -53,12 +53,11 @@ function generateComponentNameFromConfigName(configScreenName) {
         .replace(/\/index$/, '')    // Remove /index: "my-cool-feature" or "(home)"
         .replace(/^\(|\)$/g, '');   // Remove surrounding parentheses: "my-cool-feature" or "home"
     
-    // Convert "my-cool-feature" to "MyCoolFeature"
     const pascalCaseBase = baseName
         .split('-')
         .map(part => capitalizeFirstLetter(part))
         .join('');
-    return pascalCaseBase + 'Screen'; // MyCoolFeatureScreen, HomeScreen
+    return pascalCaseBase + 'Screen'; 
 }
 
 
@@ -82,7 +81,7 @@ function findAppNavigationStructureDeclaration(sourceFile) {
 
 function createScreenAstNode(factory, screenDetails) {
   const routeSegmentName = getRouteSegmentName(screenDetails.name);
-  const cleanFeatureNameForTitle = getCleanFeatureName(screenDetails.name); // For default title
+  const cleanFeatureNameForTitle = getCleanFeatureName(screenDetails.name); 
 
   const optionsProperties = [
     factory.createPropertyAssignment(
@@ -95,7 +94,7 @@ function createScreenAstNode(factory, screenDetails) {
     optionsProperties.push(
       factory.createPropertyAssignment(
         'tabBarIconName',
-        factory.createStringLiteral(screenDetails.icon || cleanFeatureNameForTitle.toLowerCase()) // Use clean name for icon
+        factory.createStringLiteral(screenDetails.icon || cleanFeatureNameForTitle.toLowerCase()) 
       )
     );
     if (screenDetails.label) {
@@ -122,7 +121,7 @@ function createScreenAstNode(factory, screenDetails) {
       factory.createPropertyAssignment('name', factory.createStringLiteral(screenDetails.name)), 
       factory.createPropertyAssignment(
         'component',
-        factory.createIdentifier(screenDetails.componentName) // This is already the generated valid PascalCase name
+        factory.createIdentifier(screenDetails.componentName) 
       ),
       factory.createPropertyAssignment('href', factory.createStringLiteral(href)),
       factory.createPropertyAssignment('options', factory.createObjectLiteralExpression(optionsProperties, true)),
@@ -509,141 +508,239 @@ async function renameScreenFiles(oldScreen, newScreen) {
 }
 
 async function modifyLayoutFileWithAst(actions) {
-  const fileContent = await fs.readFile(NAVIGATION_CONFIG_PATH, 'utf-8')
-  const sourceFile = ts.createSourceFile(
-    path.basename(NAVIGATION_CONFIG_PATH),
-    fileContent,
-    ts.ScriptTarget.ESNext,
-    true,
-    ts.ScriptKind.TSX
-  )
+    const fileContent = await fs.readFile(NAVIGATION_CONFIG_PATH, 'utf-8');
+    const sourceFile = ts.createSourceFile(
+        path.basename(NAVIGATION_CONFIG_PATH),
+        fileContent,
+        ts.ScriptTarget.ESNext,
+        true,
+        ts.ScriptKind.TSX
+    );
 
-  const transformResult = ts.transform(sourceFile, [
-    (context) => {
-      const { factory } = context
-      const visit = (node) => {
-        if (ts.isObjectLiteralExpression(node)) {
-            const namePropNode = node.properties.find(p => p.name?.getText(sourceFile) === 'name');
-            if (namePropNode && ts.isPropertyAssignment(namePropNode) && ts.isStringLiteral(namePropNode.initializer)) {
-                const navigatorName = namePropNode.initializer.text; 
-                const screensToAddForThisNav = actions.screensToAdd?.filter(s => s.parentName === navigatorName) || [];
-                const screenNamesToDeleteFromThisNav = new Set((actions.screenNamesToDelete?.filter(s => s.parentName === navigatorName) || []).map(s => s.name));
+    const transformResult = ts.transform(sourceFile, [
+        (context) => {
+            const factory = context.factory; // Use factory from context for transformations
+            return (sf) => { // sf is the SourceFile node
+                const newStatements = [];
+                let importsModifiedInThisRun = false;
 
-                if (screensToAddForThisNav.length > 0 || screenNamesToDeleteFromThisNav.size > 0) {
-                    const screensPropNode = node.properties.find(p => p.name?.getText(sourceFile) === 'screens');
-                    if (screensPropNode && ts.isPropertyAssignment(screensPropNode) && ts.isArrayLiteralExpression(screensPropNode.initializer)) {
-                        let currentScreenElements = [...screensPropNode.initializer.elements];
-                        if (screenNamesToDeleteFromThisNav.size > 0) {
-                            currentScreenElements = currentScreenElements.filter(elNode => {
-                                if (ts.isObjectLiteralExpression(elNode)) {
-                                    const screenNameProp = elNode.properties.find(p => p.name?.getText(sourceFile) === 'name');
-                                    if (screenNameProp && ts.isPropertyAssignment(screenNameProp) && ts.isStringLiteral(screenNameProp.initializer)) {
-                                        return !screenNamesToDeleteFromThisNav.has(screenNameProp.initializer.text);
+                let existingImportDeclarations = sf.statements.filter(ts.isImportDeclaration);
+                const otherOriginalStatements = sf.statements.filter(stmt => !ts.isImportDeclaration(stmt));
+                let finalImports = [...existingImportDeclarations];
+
+                // Handle imports to remove
+                if (actions.importsToRemove && actions.importsToRemove.length > 0) {
+                    const componentsToRemove = new Set(actions.importsToRemove.map(imp => imp.componentName).filter(Boolean));
+                    if (componentsToRemove.size > 0) {
+                        const filteredImports = [];
+                        finalImports.forEach(importDecl => {
+                            if (importDecl.importClause?.namedBindings && ts.isNamedImports(importDecl.importClause.namedBindings)) {
+                                const originalElements = importDecl.importClause.namedBindings.elements;
+                                const newElements = originalElements.filter(el => {
+                                    if (el.name && el.name.kind === ts.SyntaxKind.Identifier) {
+                                        return !componentsToRemove.has(el.name.escapedText.toString());
                                     }
+                                    return true;
+                                });
+
+                                if (newElements.length < originalElements.length) {
+                                    importsModifiedInThisRun = true;
+                                    if (newElements.length > 0) {
+                                        const updatedBinding = factory.updateNamedImports(importDecl.importClause.namedBindings, newElements);
+                                        const updatedClause = factory.updateImportClause(importDecl.importClause, importDecl.importClause.isTypeOnly, importDecl.importClause.name, updatedBinding);
+                                        filteredImports.push(factory.updateImportDeclaration(importDecl, importDecl.modifiers, updatedClause, importDecl.moduleSpecifier, importDecl.assertClause));
+                                    }
+                                } else {
+                                    filteredImports.push(importDecl);
                                 }
-                                return true;
-                            });
-                        }
-                        if (screensToAddForThisNav.length > 0) {
-                            screensToAddForThisNav.forEach(screenDetail => { 
-                                const typePropNode = node.properties.find(p => p.name?.getText(sourceFile) === 'type');
-                                if (typePropNode && ts.isPropertyAssignment(typePropNode) && ts.isStringLiteral(typePropNode.initializer)) {
-                                      screenDetail.parentType = typePropNode.initializer.text;
-                                }
-                                currentScreenElements.push(createScreenAstNode(factory, screenDetail));
-                            });
-                        }
-                        const newScreensArray = factory.updateArrayLiteralExpression(screensPropNode.initializer, currentScreenElements);
-                        return factory.updateObjectLiteralExpression(node, node.properties.map(p => p === screensPropNode ? factory.updatePropertyAssignment(screensPropNode, screensPropNode.name, newScreensArray) : p));
+                            } else {
+                                filteredImports.push(importDecl);
+                            }
+                        });
+                        finalImports = filteredImports;
                     }
                 }
-            }
-        }
-        if (actions.clearCommands && ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === 'commandsToExecute') {
-            return factory.updateVariableDeclaration(
-                node, node.name, node.exclamationToken, node.type,
-                factory.createObjectLiteralExpression([
-                    factory.createPropertyAssignment('add', factory.createArrayLiteralExpression([], true)),
-                    factory.createPropertyAssignment('delete', factory.createArrayLiteralExpression([], true)),
-                ], true)
-            );
-        }
-        return ts.visitEachChild(node, visit, context);
-      }
 
-      return (sf) => {
-        let statements = [...sf.statements];
-        let existingImports = statements.filter(ts.isImportDeclaration);
-        const otherStatements = statements.filter(s => !ts.isImportDeclaration(s));
-        let importsChanged = false;
+                // Handle imports to add
+                if (actions.importsToAdd && actions.importsToAdd.length > 0) {
+                    actions.importsToAdd.forEach((imp) => {
+                        console.log(`[AST Import Add] Processing import: ComponentName: ${imp.componentName}, FeatureFolderName (imp.screenName): ${imp.screenName}`);
+                        if (!imp.componentName || !imp.screenName ||
+                            !/^[a-zA-Z_$][a-zA-Z\d_$]*$/.test(imp.componentName) || 
+                            !/^[a-zA-Z0-9_().-]+$/.test(imp.screenName)) {
+                            console.warn(`[AST Import Add] Invalid import details. Skipping:`, imp);
+                            return;
+                        }
+                        const relativePath = `#features/${imp.screenName}/screen`;
+                        console.log(`[AST Import Add] Relative path for import: ${relativePath}`);
+                        const alreadyExists = finalImports.some(existingImp =>
+                            ts.isStringLiteral(existingImp.moduleSpecifier) && existingImp.moduleSpecifier.text === relativePath &&
+                            existingImp.importClause?.namedBindings && ts.isNamedImports(existingImp.importClause.namedBindings) &&
+                            existingImp.importClause.namedBindings.elements.some(el => el.name.escapedText === imp.componentName)
+                        );
 
-        if (actions.importsToRemove?.length > 0) {
-            const componentsToRemove = new Set(actions.importsToRemove.map(imp => imp.componentName).filter(Boolean));
-            if (componentsToRemove.size > 0) {
-                const newImportsList = [];
-                let localImportsChanged = false;
-                existingImports.forEach(importDecl => {
-                    if (importDecl.importClause?.namedBindings && ts.isNamedImports(importDecl.importClause.namedBindings)) {
-                        const originalElements = importDecl.importClause.namedBindings.elements;
-                        const newElements = originalElements.filter(el => !componentsToRemove.has(el.name.text));
-                        if (newElements.length < originalElements.length) {
-                           localImportsChanged = true;
-                           if (newElements.length > 0) {
-                                const updatedBinding = factory.updateNamedImports(importDecl.importClause.namedBindings, newElements);
-                                const updatedClause = factory.updateImportClause(importDecl.importClause, importDecl.importClause.isTypeOnly, importDecl.importClause.name, updatedBinding);
-                                newImportsList.push(factory.updateImportDeclaration(importDecl, importDecl.modifiers, importDecl.modifiers, updatedClause, importDecl.moduleSpecifier, importDecl.assertClause));
-                           }
-                        } else newImportsList.push(importDecl);
-                    } else newImportsList.push(importDecl);
-                });
-                if (localImportsChanged) { existingImports = newImportsList; importsChanged = true; }
-            }
-        }
+                        if (!alreadyExists) {
+                            console.log(`[AST Import Add] Adding new import for ${imp.componentName} from ${relativePath}`);
+                            const newImportSpecifier = factory.createImportSpecifier(false, undefined, factory.createIdentifier(imp.componentName));
+                            const newNamedImports = factory.createNamedImports([newImportSpecifier]);
+                            const newImportClause = factory.createImportClause(false, undefined, newNamedImports); 
+                            const newImportDeclaration = factory.createImportDeclaration(
+                                undefined, undefined, newImportClause, factory.createStringLiteral(relativePath), undefined
+                            );
+                            finalImports.push(newImportDeclaration);
+                            importsModifiedInThisRun = true;
+                        } else {
+                            console.log(`[AST Import Add] Import for ${imp.componentName} from ${relativePath} already exists.`);
+                        }
+                    });
+                }
+                newStatements.push(...finalImports);
 
-        if (actions.importsToAdd?.length > 0) {
-          actions.importsToAdd.forEach((imp) => { 
-            console.log(`[AST Import Add] Processing import: ComponentName: ${imp.componentName}, FeatureFolderName (imp.screenName): ${imp.screenName}`);
-            if (!imp.componentName || !imp.screenName || 
-                !/^[a-zA-Z_$][a-zA-Z\d_$]*$/.test(imp.componentName) || 
-                !/^[a-zA-Z0-9_().-]+$/.test(imp.screenName)) {
-                console.warn(`[AST Import Add] Invalid import details: ComponentName: ${imp.componentName}, ScreenName (Feature): ${imp.screenName}. Skipping this import.`); return;
-            }
-            const relativePath = `#features/${imp.screenName}/screen`; 
-            console.log(`[AST Import Add] Relative path for import: ${relativePath}`);
-            const alreadyExists = existingImports.some(i => i.importClause?.namedBindings && ts.isNamedImports(i.importClause.namedBindings) &&
-                                                        i.importClause.namedBindings.elements.some(el => el.name.text === imp.componentName) &&
-                                                        ts.isStringLiteral(i.moduleSpecifier) && i.moduleSpecifier.text === relativePath);
-            if (!alreadyExists) {
-                console.log(`[AST Import Add] Adding new import for ${imp.componentName} from ${relativePath}`);
-                const newImportSpecifier = factory.createImportSpecifier(false, undefined, factory.createIdentifier(imp.componentName));
-                const newNamedImports = factory.createNamedImports([newImportSpecifier]);
-                const newImportClause = factory.createImportClause(false, undefined, newNamedImports);
-                existingImports.push(factory.createImportDeclaration(undefined, undefined, newImportClause, factory.createStringLiteral(relativePath), undefined));
-                importsChanged = true;
-            } else {
-                 console.log(`[AST Import Add] Import for ${imp.componentName} from ${relativePath} already exists.`);
-            }
-          });
-        }
+                // Visitor for non-import statements
+                const visitOtherNodes = (node) => {
+                    if (ts.isObjectLiteralExpression(node)) {
+                        const namePropNode = node.properties.find(p => p.name?.getText(sourceFile) === 'name');
+                        if (namePropNode && ts.isPropertyAssignment(namePropNode) && ts.isStringLiteral(namePropNode.initializer)) {
+                            const navigatorName = namePropNode.initializer.text;
+                            let nodeWasModified = false;
+                            let currentProperties = [...node.properties]; // Work on a copy
 
-        const transformedOtherStatements = ts.visitNodes(factory.createNodeArray(otherStatements), visit, context);
+                            // Screen add/delete logic
+                            if (actions.screensToAdd?.some(s => s.parentName === navigatorName) || actions.screenNamesToDelete?.some(s => s.parentName === navigatorName)) {
+                                 const screensPropIndex = currentProperties.findIndex(p => ts.isPropertyAssignment(p) && p.name?.getText(sourceFile) === 'screens');
+                                 if (screensPropIndex !== -1) {
+                                    const screensPropNode = currentProperties[screensPropIndex] as ts.PropertyAssignment;
+                                    if (ts.isArrayLiteralExpression(screensPropNode.initializer)) {
+                                        let currentScreenElements = [...screensPropNode.initializer.elements];
+                                        const screensToAddForThisNav = actions.screensToAdd?.filter(s => s.parentName === navigatorName) || [];
+                                        const screenNamesToDeleteFromThisNav = new Set((actions.screenNamesToDelete?.filter(s => s.parentName === navigatorName) || []).map(s => s.name));
 
-        if(importsChanged) {
-             return factory.updateSourceFile(sf, [...existingImports, ...transformedOtherStatements]);
-        }
-        const bodyTransformed = ts.visitNodes(factory.createNodeArray(otherStatements), visit, context);
-        return factory.updateSourceFile(sf, [...existingImports, ...bodyTransformed]);
-      };
-    },
-  ]);
+                                        if (screenNamesToDeleteFromThisNav.size > 0) {
+                                            currentScreenElements = currentScreenElements.filter(elNode => {
+                                                if (ts.isObjectLiteralExpression(elNode)) {
+                                                    const screenNameProp = elNode.properties.find(p => ts.isPropertyAssignment(p) && p.name?.getText(sourceFile) === 'name');
+                                                    if (screenNameProp && ts.isPropertyAssignment(screenNameProp) && ts.isStringLiteral(screenNameProp.initializer)) {
+                                                        return !screenNamesToDeleteFromThisNav.has(screenNameProp.initializer.text);
+                                                    }
+                                                }
+                                                return true;
+                                            });
+                                            nodeWasModified = true;
+                                        }
+                                        if (screensToAddForThisNav.length > 0) {
+                                            screensToAddForThisNav.forEach(screenDetail => {
+                                                const typePropNode = node.properties.find(p => ts.isPropertyAssignment(p) && p.name?.getText(sourceFile) === 'type'); 
+                                                if (typePropNode && ts.isPropertyAssignment(typePropNode) && ts.isStringLiteral(typePropNode.initializer)) {
+                                                    screenDetail.parentType = typePropNode.initializer.text;
+                                                }
+                                                currentScreenElements.push(createScreenAstNode(factory, screenDetail));
+                                            });
+                                            nodeWasModified = true;
+                                        }
+                                        if (nodeWasModified) { 
+                                            const newScreensArray = factory.updateArrayLiteralExpression(screensPropNode.initializer, currentScreenElements);
+                                            currentProperties[screensPropIndex] = factory.updatePropertyAssignment(screensPropNode, screensPropNode.name, newScreensArray);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Navigator option updates logic
+                            if(actions.navigatorOptionUpdates?.some(upd => upd.navigatorName === navigatorName)) {
+                                const updatesForThisNav = actions.navigatorOptionUpdates.filter(upd => upd.navigatorName === navigatorName);
+                                updatesForThisNav.forEach(update => {
+                                    let currentLevelPropsArray = currentProperties; 
+                                    let propsRefStack = []; 
 
-  const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-  const newFileContent = printer.printFile(transformResult.transformed[0]);
+                                    for (let i = 0; i < update.optionPath.length; i++) {
+                                        const optionKey = update.optionPath[i];
+                                        let propIndex = currentLevelPropsArray.findIndex(p => ts.isPropertyAssignment(p) && p.name?.getText(sourceFile) === optionKey);
 
-  ignoreNextConfigChange = true;
-  await fs.writeFile(NAVIGATION_CONFIG_PATH, newFileContent);
-  console.log(`layout.tsx AST updated programmatically.`);
+                                        if (i === update.optionPath.length - 1) { 
+                                            const newInitializer = typeof update.newValue === 'string' ? factory.createStringLiteral(update.newValue) : factory.createIdentifier(String(update.newValue));
+                                            if (propIndex !== -1) { 
+                                                const oldProp = currentLevelPropsArray[propIndex] as ts.PropertyAssignment;
+                                                currentLevelPropsArray[propIndex] = factory.updatePropertyAssignment(oldProp, oldProp.name, newInitializer);
+                                            } else { 
+                                                currentLevelPropsArray.push(factory.createPropertyAssignment(factory.createIdentifier(optionKey), newInitializer));
+                                            }
+                                            nodeWasModified = true;
+                                        } else { 
+                                            if (propIndex !== -1 && ts.isPropertyAssignment(currentLevelPropsArray[propIndex]) && ts.isObjectLiteralExpression(currentLevelPropsArray[propIndex].initializer)) {
+                                                const objLiteral = currentLevelPropsArray[propIndex].initializer as ts.ObjectLiteralExpression;
+                                                propsRefStack.push({propsArray: currentLevelPropsArray, index: propIndex, originalNode: currentLevelPropsArray[propIndex]});
+                                                currentLevelPropsArray = [...objLiteral.properties]; 
+                                            } else { 
+                                                const newObject = factory.createObjectLiteralExpression([], true);
+                                                const newPropAssignment = factory.createPropertyAssignment(factory.createIdentifier(optionKey), newObject);
+                                                if (propIndex !== -1) { 
+                                                    currentLevelPropsArray[propIndex] = newPropAssignment;
+                                                } else {
+                                                    currentLevelPropsArray.push(newPropAssignment);
+                                                }
+                                                nodeWasModified = true; 
+                                                propsRefStack.push({propsArray: currentLevelPropsArray, index: currentLevelPropsArray.length -1, originalNode: newPropAssignment});
+                                                currentLevelPropsArray = []; // Properties of the new empty object
+                                            }
+                                        }
+                                    }
+                                    if (nodeWasModified) { 
+                                        for (let k = propsRefStack.length - 1; k >= 0; k--) {
+                                            const level = propsRefStack[k];
+                                            const parentProp = level.originalNode as ts.PropertyAssignment;
+                                            // currentLevelPropsArray at this point is the properties of the object at level k+1
+                                            const newChildObject = factory.createObjectLiteralExpression(currentLevelPropsArray, true);
+                                            level.propsArray[level.index] = factory.updatePropertyAssignment(parentProp, parentProp.name, newChildObject);
+                                            currentLevelPropsArray = level.propsArray; 
+                                        }
+                                        if (propsRefStack.length === 0) { 
+                                             currentProperties = currentLevelPropsArray;
+                                        }
+                                    }
+                                });
+                            }
+
+                            if (nodeWasModified) {
+                                return factory.updateObjectLiteralExpression(node, currentProperties);
+                            }
+                        }
+                    }
+
+                    if (actions.clearCommands && ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === 'commandsToExecute') {
+                        return factory.updateVariableDeclaration(
+                            node, node.name, node.exclamationToken, node.type,
+                            factory.createObjectLiteralExpression([
+                                factory.createPropertyAssignment('add', factory.createArrayLiteralExpression([], true)),
+                                factory.createPropertyAssignment('delete', factory.createArrayLiteralExpression([], true)),
+                            ], true)
+                        );
+                    }
+                    return ts.visitEachChild(node, visitOtherNodes, context); 
+                };
+
+                const transformedNonImportStatements = [];
+                for (const statement of otherOriginalStatements) {
+                    const transformedNode = ts.visitNode(statement, visitOtherNodes); 
+                    if (transformedNode) {
+                        transformedNonImportStatements.push(transformedNode);
+                    }
+                }
+                
+                newStatements.push(...transformedNonImportStatements); 
+
+                return factory.updateSourceFile(sf, newStatements as readonly ts.Statement[]);
+            };
+        },
+    ]);
+
+    const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+    const newFileContent = printer.printFile(transformResult.transformed[0]);
+
+    ignoreNextConfigChange = true;
+    await fs.writeFile(NAVIGATION_CONFIG_PATH, newFileContent);
+    console.log(`layout.tsx AST updated programmatically.`);
 }
+
 
 async function processBatchOfChanges(currentScreensFromParse) {
   if (actionInProgress) {
@@ -1063,8 +1160,7 @@ async function onConfigFileChanged(changedPath) {
     for(const cmd of (commandsToExecute.add || [])) { 
         const { parentName } = await inquirer.default.prompt([ { type: 'list', name: 'parentName', message: `Command: Add '${cmd.name}'. Which parent navigator?`, choices: [{name: '(drawer)', value: '(drawer)'}, {name: '(tabs)', value: '(tabs)'}] }]);
         const parentType = parentName === '(tabs)' ? 'tabs' : 'drawer'; 
-        const cleanFeatureName = getCleanFeatureName(cmd.name);
-        const componentName = cmd.componentName || capitalizeFirstLetter(cleanFeatureName) + 'Screen';
+        const componentName = cmd.componentName || generateComponentNameFromConfigName(cmd.name); // Use helper
         
         actionsForAst.screensToAdd.push({ name: cmd.name, componentName, title: cmd.title, icon: cmd.icon, label: cmd.label, href: cmd.href, parentName, parentType });
         actionsForAst.importsToAdd.push({ componentName, screenName: getRouteSegmentName(cmd.name) }); 
@@ -1107,7 +1203,7 @@ async function onConfigFileChanged(changedPath) {
     }
   }
 
-  const astModifiedByBatch = await processBatchOfChanges(currentScreensFromParse);
+  const astModifiedByBatch = await processBatchOfChanges(currentScreensFromFile); // Corrected variable name
   const astModifiedThisCycle = astModifiedByCommands || astModifiedByBatch;
 
   console.log("Running post-change consistency validation...");
@@ -1300,9 +1396,11 @@ async function handleDirectCliCommands(command, configScreenNames, cliOptions = 
               const routeSegmentName = getRouteSegmentName(originalConfigScreenName);
               const featureFolderName = getRouteSegmentName(originalConfigScreenName); // This is correct for feature folder
               
-              // Generate a valid PascalCase component name
               let componentName = generateComponentNameFromConfigName(originalConfigScreenName);
-              console.log(`[Debug] For ${originalConfigScreenName}, generated componentName: ${componentName}`);
+              console.log(`[Debug Add Command] For originalConfigScreenName: ${originalConfigScreenName}`);
+              console.log(`  - routeSegmentName: ${routeSegmentName}`);
+              console.log(`  - featureFolderName: ${featureFolderName}`);
+              console.log(`  - generatedComponentName: ${componentName}`);
 
 
               let title = capitalizeFirstLetter(getCleanFeatureName(originalConfigScreenName)); // Use getCleanFeatureName for default title
@@ -1313,6 +1411,8 @@ async function handleDirectCliCommands(command, configScreenNames, cliOptions = 
               
               let finalConfigScreenName = originalConfigScreenName;
               let currentScreenDetails = { name: finalConfigScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt };
+              console.log('[Debug Add Command] Initial currentScreenDetails:', currentScreenDetails);
+
 
               if (!useDefaultsForAll) {
                   let confirmDefaultCurrent = true;
@@ -1321,11 +1421,11 @@ async function handleDirectCliCommands(command, configScreenNames, cliOptions = 
                   if (guiDetails) {
                       confirmDefaultCurrent = false; // Use GUI details
                       currentScreenDetails.title = guiDetails.title || title; // Use custom title from GUI
-                      // Potentially update other details like componentName if GUI provides them and they are valid
                       if (guiDetails.componentName && /^[A-Z][a-zA-Z0-9_]*Screen$/.test(guiDetails.componentName)) {
-                          componentName = guiDetails.componentName; // This should already be valid from generateComponentNameFromConfigName
+                          componentName = guiDetails.componentName; 
                           currentScreenDetails.componentName = componentName;
                       }
+                       console.log('[Debug Add Command] Using GUI details:', currentScreenDetails);
                   } else if (!isNonInteractive) {
                        const answer = await inquirer.default.prompt([{ 
                           type: 'confirm', 
@@ -1359,11 +1459,15 @@ async function handleDirectCliCommands(command, configScreenNames, cliOptions = 
                       }
                       currentScreenDetails = { name: finalConfigScreenName, componentName, title, icon, label, href, parentName: parentNameFromPrompt, parentType: parentTypeFromPrompt };
                       astModificationsForLayout.importsToAdd.push({ componentName, screenName: currentFeatureFolderName }); 
+                      console.log('[Debug Add Command] After interactive customization, currentScreenDetails:', currentScreenDetails);
+                      console.log('[Debug Add Command] Import to add (interactive custom):', { componentName, screenName: currentFeatureFolderName });
                   } else { 
                       astModificationsForLayout.importsToAdd.push({ componentName, screenName: featureFolderName });
+                      console.log('[Debug Add Command] Import to add (default for this screen or GUI):', { componentName, screenName: featureFolderName });
                   }
               } else { 
                   astModificationsForLayout.importsToAdd.push({ componentName, screenName: featureFolderName });
+                  console.log('[Debug Add Command] Import to add (useDefaultsForAll):', { componentName, screenName: featureFolderName });
               }
               astModificationsForLayout.screensToAdd.push(currentScreenDetails);
               fileGenerationDetails.push({ configScreenName: currentScreenDetails.name, componentName: currentScreenDetails.componentName, parent: parentNavigatorChoice, title: currentScreenDetails.title });
@@ -1435,7 +1539,7 @@ function startGuiServer() {
   });
 
   app.post('/api/add-screens', async (req, res) => {
-    const { useDefaultsForAll, itemsToAdd } = req.body;
+    const { useDefaultsForAll, itemsToAdd, tabsInitialRouteSegment } = req.body; 
     console.log('GUI API: Received /api/add-screens request:', JSON.stringify(req.body, null, 2));
 
     if (!Array.isArray(itemsToAdd) || itemsToAdd.length === 0) {
@@ -1461,7 +1565,6 @@ function startGuiServer() {
 
             const screenDetailsForGroup = {};
             const screenNamesForGroup = group.screens.map(s => {
-                // GUI sends segment name, CLI expects full name with /index
                 const fullScreenName = s.name.includes('/') || s.name.startsWith('(') ? s.name : `${s.name}/index`;
                 screenDetailsForGroup[fullScreenName] = { title: s.customTitle };
                 return fullScreenName;
@@ -1486,7 +1589,7 @@ function startGuiServer() {
                 if (!result.success) {
                     overallSuccess = false;
                     if (result.message) combinedErrors.push(`Error for group ${parentChoice.name}: ${result.message}`);
-                    if (result.error) combinedErrors.push(result.error); // Make sure 'error' field is populated in handleDirectCliCommands
+                    if (result.error) combinedErrors.push(result.error); 
                 }
             } catch (groupError) {
                  console.error(`Error processing group for ${parentChoice.name}:`, groupError);
@@ -1495,10 +1598,30 @@ function startGuiServer() {
             }
         }
         
+        if (tabsInitialRouteSegment && overallSuccess) { 
+            console.log(`GUI API: Attempting to set initialRouteName for (tabs) to: ${tabsInitialRouteSegment}/index`);
+            const initialRouteUpdateAction = {
+                navigatorOptionUpdates: [{
+                    navigatorName: '(tabs)',
+                    optionPath: ['tabNavigatorOptions', 'initialRouteName'],
+                    newValue: `${tabsInitialRouteSegment}/index`
+                }]
+            };
+            try {
+                await modifyLayoutFileWithAst(initialRouteUpdateAction);
+                combinedOutput.push(`\nSuccessfully updated initialRouteName for (tabs) navigator to ${tabsInitialRouteSegment}/index.`);
+            } catch (e) {
+                console.error(`GUI API: Error updating initialRouteName for (tabs):`, e);
+                combinedErrors.push(`Error updating initialRouteName for (tabs): ${e.message}`);
+                overallSuccess = false; 
+            }
+        }
+
+
         combinedOutput.push("\nBatch operation complete. Validating project consistency...");
         const finalConfig = await parseNavigationConfig(NAVIGATION_CONFIG_PATH);
         if (finalConfig?.screens && finalConfig.sourceFile) {
-            const validationResult = await validateProjectConsistency(finalConfig.screens, finalConfig.sourceFile, false); // Non-interactive validation
+            const validationResult = await validateProjectConsistency(finalConfig.screens, finalConfig.sourceFile, false); 
             if(validationResult.fixesApplied || validationResult.astModified) {
                 combinedOutput.push("Consistency validation applied some fixes.");
             } else {
@@ -1535,4 +1658,3 @@ main().catch((err) => {
   console.error('Unhandled error in main execution:', err)
   process.exit(1)
 })
-
