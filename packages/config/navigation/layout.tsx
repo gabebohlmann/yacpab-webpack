@@ -14,7 +14,15 @@ import {
 ParamListBase, // Useful for generic navigator/screen prop types
 // RouteProp, // Keep if used directly
  } from '@react-navigation/native';
-import { HomeScreen } from "#features/(home)/screen";
+import { HomeScreen } from "#features/home/screen";
+import { FlashesScreen } from "#features/flashes/screen";
+import { SearchScreen } from "#features/search/screen";
+import { SubscriptionsScreen } from "#features/subscriptions/screen";
+import { AccountScreen } from "#features/account/screen";
+import { TrendingScreen } from "#features/trending/screen";
+import { MusicScreen } from "#features/music/screen";
+import { PodcastsScreen } from "#features/podcasts/screen";
+import { LivestreamsScreen } from "#features/livestreams/screen";
 export const isAutoSaveEnabled = true;
 export const isEditing = false;
 // --- Generic Configuration Types ---
@@ -177,32 +185,109 @@ export const appNavigationStructure: NavigatorLayout[] = [
                         showOn: ['mobile'],
                         options: {
                             // Options for (tabs) *as a screen/item* within the '(drawer)'
-                            title: 'Vidream Main',
+                            title: 'Vidream',
                             drawerLabel: 'Dashboard',
                             drawerItemStyle: { display: 'none' },
                         },
                         tabNavigatorOptions: {
                             // Props for the <Tabs.Navigator> for '(tabs)'
-                            initialRouteName: '(home)/index',
+                            initialRouteName: "home/index",
                             screenOptions: {
                                 // Default screen options for screens *within* these Tabs
                                 headerShown: false,
-                            }, // This should now be valid
-                        },
-                        screens: [
-                            {
-                                type: 'screen',
-                                name: '(home)/index',
-                                component: HomeScreen,
-                                href: '/',
-                                options: {
-                                    title: 'Home',
-                                    tabBarIconName: 'home',
-                                    tabBarLabel: 'Home',
-                                    drawerLabel: 'Home',
-                                },
                             }
-                        ]
+                        },
+                        screens: [{
+                                type: "screen",
+                                name: "home/index",
+                                component: HomeScreen,
+                                href: "/(tabs)/home",
+                                options: {
+                                    title: "Home",
+                                    tabBarIconName: "home",
+                                    tabBarLabel: "Home"
+                                }
+                            }, {
+                                type: "screen",
+                                name: "flashes/index",
+                                component: FlashesScreen,
+                                href: "/(tabs)/flashes",
+                                options: {
+                                    title: "Flashes",
+                                    tabBarIconName: "flashes",
+                                    tabBarLabel: "Flashes"
+                                }
+                            }, {
+                                type: "screen",
+                                name: "search/index",
+                                component: SearchScreen,
+                                href: "/(tabs)/search",
+                                options: {
+                                    title: "Search",
+                                    tabBarIconName: "search",
+                                    tabBarLabel: "Search"
+                                }
+                            }, {
+                                type: "screen",
+                                name: "subscriptions/index",
+                                component: SubscriptionsScreen,
+                                href: "/(tabs)/subscriptions",
+                                options: {
+                                    title: "Subscriptions",
+                                    tabBarIconName: "subscriptions",
+                                    tabBarLabel: "Subscriptions"
+                                }
+                            }, {
+                                type: "screen",
+                                name: "account/index",
+                                component: AccountScreen,
+                                href: "/(tabs)/account",
+                                options: {
+                                    title: "Account",
+                                    tabBarIconName: "account",
+                                    tabBarLabel: "Account"
+                                }
+                            }]
+                    },
+                    {
+                        type: "screen",
+                        name: "trending/index",
+                        component: TrendingScreen,
+                        href: "/(drawer)/trending",
+                        options: {
+                            title: "Trending",
+                            drawerLabel: "Trending"
+                        }
+                    },
+                    {
+                        type: "screen",
+                        name: "music/index",
+                        component: MusicScreen,
+                        href: "/(drawer)/music",
+                        options: {
+                            title: "Music",
+                            drawerLabel: "Music"
+                        }
+                    },
+                    {
+                        type: "screen",
+                        name: "podcasts/index",
+                        component: PodcastsScreen,
+                        href: "/(drawer)/podcasts",
+                        options: {
+                            title: "Podcasts",
+                            drawerLabel: "Podcasts"
+                        }
+                    },
+                    {
+                        type: "screen",
+                        name: "livestreams/index",
+                        component: LivestreamsScreen,
+                        href: "/(drawer)/livestreams",
+                        options: {
+                            title: "Livestreams",
+                            drawerLabel: "Livestreams"
+                        }
                     }
                 ]
             },
